@@ -33,8 +33,8 @@ plays it against baselines. Its rules are checked against the Python engine.
 ```
 cd trainer && cargo build --release
 ./target/release/trainer train 10 200000 ../nets/h10.bin          # houses, games, output
-./target/release/trainer train 10 200000 ../nets/h10.bin resume=../nets/h10-18k.bin
-./target/release/trainer eval 10 2000 ../nets/h10.bin greedy       # or random, or another net
+./target/release/trainer train 10 200000 ../nets/h10.bin resume=../nets/h10-v2.bin
+./target/release/trainer eval 10 2000 ../nets/h10.bin greedy       # or random, or another net; FILE@1 = one-move lookahead, FILE@2d = always digs
 ./target/release/trainer transcript 10 200 1 | PYTHONPATH=.. python ../tests/verify_rust.py
 ```
 

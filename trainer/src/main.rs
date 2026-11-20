@@ -1,13 +1,15 @@
 //! Self-play trainer for Thronestorm.
 //!
 //!   trainer train <houses> <games> <net.bin> [threads=N] [resume=FILE] [eps=0.1]
-//!                 [lambda=0.7] [lr=0.001] [seed=1]
-//!   trainer eval <houses> <games> <A> <B>      A, B: greedy | random | FILE
+//!                 [lambda=0.7] [lr=0.001] [seed=1] [depth=2]
+//!   trainer eval <houses> <games> <A> <B>      A, B: greedy | random | FILE | FILE@1 | FILE@2d
 //!   trainer transcript <houses> <games> <seed>
 //!
 //! Every player first applies exact one-move tactics: take a win if there is
-//! one, and avoid moves that hand the opponent an immediate win. The network
-//! only chooses among what is left.
+//! one, and avoid moves that hand the opponent an immediate win. With
+//! lookahead 2 the network player also plays any move that leaves the opponent
+//! no answer, and avoids moves that allow the opponent one. The network
+//! chooses among what is left.
 
 mod game;
 mod net;
@@ -26,7 +28,7 @@ fn no_pass() -> bool {
 
 #[derive(Clone)]
 enum Player {
-    Net(Arc<Net>, f32), // network, exploration rate
+    Net(Arc<Net>, f32, u8, bool), // network, exploration rate, lookahead (1 or 2), always dig
     Greedy,
     Random,
 }
@@ -66,23 +68,56 @@ fn choose(pl: &Player, s: &State, succ: &[(State, Move)], rng: &mut Rng) -> usiz
             let best: Vec<usize> = cands.into_iter().filter(|&i| key(i) == top).collect();
             best[rng.below(best.len())]
         }
-        Player::Net(net, eps) => {
+        Player::Net(net, eps, depth, dig) => {
             if *eps > 0.0 && rng.unit() < *eps {
                 return cands[rng.below(cands.len())];
             }
-            let mut best = cands[0];
-            let mut best_v = f32::INFINITY;
-            for &i in &cands {
-                // the successor is scored for the opponent, so lower is better
-                let v = net.eval(&features(&succ[i].0), None);
-                if v < best_v {
-                    best_v = v;
-                    best = i;
+            let mut buf = Vec::new();
+            if *depth >= 2 {
+                // a move that leaves the opponent no answer to my threats
+                if let Some(&i) = cands.iter().find(|&&i| forced_win(&succ[i].0, p, &mut buf)) {
+                    return i;
                 }
             }
-            best
+            if *dig {
+                // the digger claims whenever a claim is among its safe moves
+                let claims: Vec<usize> =
+                    cands.iter().cloned().filter(|&i| matches!(succ[i].1, Move::Claim { .. })).collect();
+                if !claims.is_empty() {
+                    cands = claims;
+                }
+            }
+            // the successor is scored for the opponent, so lower is better
+            let mut scored: Vec<(f32, usize)> =
+                cands.iter().map(|&i| (net.eval(&features(&succ[i].0), None), i)).collect();
+            scored.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+            if *depth >= 2 {
+                // skip moves that let the opponent set up such a position himself
+                let mut theirs = Vec::new();
+                for &(_, i) in scored.iter().take(CHECKED) {
+                    succ[i].0.successors(&mut theirs);
+                    if !theirs.iter().any(|(t, _)| !t.can_win_now(p) && forced_win(t, 1 - p, &mut buf)) {
+                        return i;
+                    }
+                }
+            }
+            scored[0].1
         }
     }
+}
+
+/// How many of the network's preferred moves get the deeper safety check.
+const CHECKED: usize = 6;
+
+/// `after` is the position just after `attacker` moved. True if he threatens
+/// to win and every reply still leaves him a winning move. A relic that a
+/// claim has yet to turn up is ignored.
+fn forced_win(after: &State, attacker: usize, buf: &mut Vec<(State, Move)>) -> bool {
+    if after.winner.is_some() || !after.can_win_now(attacker) {
+        return false;
+    }
+    after.successors(buf);
+    buf.iter().all(|(r, _)| r.winner.is_none() && r.can_win_now(attacker))
 }
 
 struct Game {
@@ -140,7 +175,14 @@ fn load_player(name: &str) -> Player {
     match name {
         "greedy" => Player::Greedy,
         "random" => Player::Random,
-        file => Player::Net(Arc::new(Net::load(file)), 0.0),
+        spec => {
+            // FILE, FILE@1 or FILE@2 to set the lookahead; add d (FILE@2d) for a
+            // player that claims whenever it safely can
+            let (file, tag) = spec.rsplit_once('@').unwrap_or((spec, "2"));
+            let dig = tag.ends_with('d');
+            let depth: u8 = tag.trim_end_matches('d').parse().expect("lookahead must be 1 or 2");
+            Player::Net(Arc::new(Net::load(file)), 0.0, depth, dig)
+        }
     }
 }
 
@@ -192,6 +234,7 @@ fn train(args: &[String]) {
     let lambda: f32 = opt(args, "lambda", 0.7);
     let lr: f32 = opt(args, "lr", 0.001);
     let seed: u64 = opt(args, "seed", 1);
+    let depth: u8 = opt(args, "depth", 2);
     let resume: String = opt(args, "resume", String::new());
     let mut rng = Rng(seed);
     let mut net = if resume.is_empty() { Net::new(&mut rng) } else { Net::load(&resume) };
@@ -211,7 +254,7 @@ fn train(args: &[String]) {
                     let snap = snap.clone();
                     let base = seed.wrapping_mul(1_000_003).wrapping_add((done + t * per_thread) as u64);
                     sc.spawn(move || {
-                        let pl = Player::Net(snap.clone(), eps);
+                        let pl = Player::Net(snap.clone(), eps, depth, false);
                         (0..per_thread)
                             .map(|g| {
                                 let mut rng = Rng(base.wrapping_add(g as u64).wrapping_mul(0x2545F4914F6CDD1D));
@@ -249,7 +292,7 @@ fn train(args: &[String]) {
         if done >= next_report || done >= games {
             next_report += report_every;
             net.save(path);
-            let me = Player::Net(Arc::new(net.clone()), 0.0);
+            let me = Player::Net(Arc::new(net.clone()), 0.0, depth, false);
             let (w, l, d, _, _, _) = matchup(n, 200, &me, &Player::Greedy, 99, threads);
             println!(
                 "games {done:>8} | {:>5.0}s | self-play: decided {:5.1}%, first player {:5.1}% of decided, {:5.1} turns, loss {:.4} | vs greedy: win {:5.1}% lose {:5.1}% unfinished {:5.1}%",

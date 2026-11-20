@@ -279,32 +279,36 @@ impl State {
             return false;
         }
         let mask = hand_mask(hand);
-        let mut lines = Vec::new();
-        self.lines(p, &mut lines);
         let mut cnt = [0u8; MAXH];
         for &c in hand {
             cnt[house(c)] += 1;
         }
-        for line in &lines {
-            let cs = [
-                self.cells[cid(line[0].0, line[0].1)],
-                self.cells[cid(line[1].0, line[1].1)],
-                self.cells[cid(line[2].0, line[2].1)],
-            ];
-            if mask & (1 << house(cs[0])) == 0 {
-                continue;
+        let b = if p == 0 { 2 } else { 0 };
+        let t = 2 - b;
+        let mut x = self.lo - (self.lo.rem_euclid(2));
+        while x <= self.hi {
+            let c0 = self.cells[cid(b, x)];
+            if c0 != NONE && mask & (1 << house(c0)) != 0 {
+                for d in [-1, 1] {
+                    let c1 = self.cells[cid(1, x + d)];
+                    let c2 = self.cells[cid(t, x + 2 * d)];
+                    if c1 == NONE || c2 == NONE {
+                        continue;
+                    }
+                    let mut hit = false;
+                    for c in [c0, c1, c2] {
+                        cnt[house(c)] += 1;
+                        hit |= cnt[house(c)] == 4;
+                    }
+                    for c in [c0, c1, c2] {
+                        cnt[house(c)] -= 1;
+                    }
+                    if hit {
+                        return true;
+                    }
+                }
             }
-            let mut hit = false;
-            for &c in &cs {
-                cnt[house(c)] += 1;
-                hit |= cnt[house(c)] == 4;
-            }
-            for &c in &cs {
-                cnt[house(c)] -= 1;
-            }
-            if hit {
-                return true;
-            }
+            x += 2;
         }
         false
     }
