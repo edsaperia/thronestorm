@@ -36,7 +36,7 @@ cd trainer && cargo build --release
 ./target/release/trainer train 10 200000 ../nets/h10-win.bin rivalry=0 gamma=0.98 resume=../nets/h10-win.bin
 ./target/release/trainer eval 10 2000 ../nets/h10-win.bin ../nets/h10-win.bin rivalry=0
 ./target/release/trainer eval 10 2000 ../nets/h10-win.bin ../nets/h10-half.bin rivalryA=0 rivalryB=1
-./target/release/trainer eval 10 2000 ../nets/h10-win.bin greedy    # or random; FILE@1 = one-move lookahead, FILE@2d = always digs
+./target/release/trainer eval 10 2000 ../nets/h10-win.bin greedy    # or random; FILE@N = lookahead of N moves (1 to 4, default 2), FILE@2d = always digs
 ./target/release/trainer transcript 10 200 1 | PYTHONPATH=.. python ../tests/verify_rust.py
 ```
 
@@ -44,5 +44,5 @@ cd trainer && cargo build --release
 `nets/h10-half.bin` with a draw scored as half a win (rivalry 1). Use the matching
 `rivalry=` when playing them.
 
-Other `train` options: `threads=`, `eps=` (exploration), `lambda=`, `lr=`, `seed=`, `depth=`.
+Other `train` options: `threads=`, `eps=` (exploration), `lambda=`, `lr=`, `seed=`, `depth=` (lookahead while training; 3 is a good trade-off).
 Set `NOPASS=1` to play the variant where passing is only allowed with no other move.

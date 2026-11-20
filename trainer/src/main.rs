@@ -11,8 +11,10 @@
 //! Every player first applies exact one-move tactics: take a win if there is
 //! one, and avoid moves that hand the opponent an immediate win. With
 //! lookahead 2 the network player also plays any move that leaves the opponent
-//! no answer, and avoids moves that allow the opponent one. The network
-//! chooses among what is left.
+//! no answer, and avoids moves that allow the opponent one. Lookahead 3 adds
+//! a three-move search (a quiet move, any reply, then a forcing win) over the
+//! network's preferred moves; lookahead 4 also guards against the opponent's.
+//! The network chooses among what is left.
 
 mod game;
 mod net;
@@ -31,7 +33,7 @@ fn no_pass() -> bool {
 
 #[derive(Clone)]
 enum Player {
-    /// network, exploration rate, lookahead (1 or 2), always dig, rivalry
+    /// network, exploration rate, lookahead (1 to 4), always dig, rivalry
     Net(Arc<Net>, f32, u8, bool, f32),
     Greedy,
     Random,
@@ -102,12 +104,31 @@ fn choose(pl: &Player, s: &State, succ: &[(State, Move)], rng: &mut Rng) -> usiz
                 })
                 .collect();
             scored.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+            if *depth >= 3 {
+                // a quiet move after which every reply still loses to a forcing move
+                if let Some(&(_, i)) = scored.iter().take(deep()).find(|&&(_, i)| forced_win3(&succ[i].0, p)) {
+                    return i;
+                }
+            }
             if *depth >= 2 {
                 // skip moves that let the opponent set up such a position himself
                 let mut theirs = Vec::new();
                 for &(_, i) in scored.iter().take(CHECKED) {
                     succ[i].0.successors(&mut theirs);
-                    if !theirs.iter().any(|(t, _)| !t.can_win_now(p) && forced_win(t, 1 - p, &mut buf)) {
+                    let mut bad = theirs.iter().any(|(t, _)| !t.can_win_now(p) && forced_win(t, 1 - p, &mut buf));
+                    if !bad && *depth >= 4 {
+                        // also the opponent's most promising quiet moves, three deep
+                        let mut rated: Vec<(f32, usize)> = (0..theirs.len())
+                            .filter(|&j| theirs[j].0.winner.is_none())
+                            .map(|j| {
+                                let v = net.eval(&features(&theirs[j].0), None);
+                                (rivalry * v[0] - v[1], j)
+                            })
+                            .collect();
+                        rated.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                        bad = rated.iter().take(deep()).any(|&(_, j)| forced_win3(&theirs[j].0, 1 - p));
+                    }
+                    if !bad {
                         return i;
                     }
                 }
@@ -119,6 +140,36 @@ fn choose(pl: &Player, s: &State, succ: &[(State, Move)], rng: &mut Rng) -> usiz
 
 /// How many of the network's preferred moves get the deeper safety check.
 const CHECKED: usize = 6;
+
+/// How many of the network's preferred moves get the three-move search (set with DEEP=).
+fn deep() -> usize {
+    static N: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *N.get_or_init(|| std::env::var("DEEP").ok().and_then(|v| v.parse().ok()).unwrap_or(30))
+}
+
+/// `s` has `me` to move. True if he can win at once, or has a move that
+/// leaves the opponent no answer.
+fn has_forcing_win(s: &State, me: usize) -> bool {
+    if s.can_win_now(me) {
+        return true;
+    }
+    let mut mine = Vec::new();
+    let mut buf = Vec::new();
+    s.successors(&mut mine);
+    mine.iter().any(|(t, _)| forced_win(t, me, &mut buf))
+}
+
+/// `after` is the position just after `attacker` moved, possibly quietly.
+/// True if every reply, the pass included, leaves him a forcing win.
+/// The pass is tried first, which rejects most quiet moves cheaply.
+fn forced_win3(after: &State, attacker: usize) -> bool {
+    if after.winner.is_some() || after.can_win_now(1 - attacker) {
+        return false;
+    }
+    let mut replies = Vec::new();
+    after.successors(&mut replies);
+    replies.iter().all(|(r, _)| r.winner.is_none() && has_forcing_win(r, attacker))
+}
 
 /// `after` is the position just after `attacker` moved. True if he threatens
 /// to win and every reply still leaves him a winning move. A relic that a
@@ -202,7 +253,7 @@ fn load_player(name: &str, rivalry: f32) -> Player {
             // player that claims whenever it safely can
             let (file, tag) = spec.rsplit_once('@').unwrap_or((spec, "2"));
             let dig = tag.ends_with('d');
-            let depth: u8 = tag.trim_end_matches('d').parse().expect("lookahead must be 1 or 2");
+            let depth: u8 = tag.trim_end_matches('d').parse().expect("lookahead must be 1 to 4");
             Player::Net(Arc::new(Net::load(file)), 0.0, depth, dig, rivalry)
         }
     }
