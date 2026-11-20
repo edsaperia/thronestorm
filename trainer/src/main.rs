@@ -6,7 +6,7 @@
 //!   a win; 0 = a draw is as bad as a loss. gamma < 1 makes later wins worth less.
 //!   trainer eval <houses> <games> <A> <B> [rivalry=1] [rivalryA=] [rivalryB=]
 //!                 A, B: greedy | random | FILE | FILE@1 | FILE@2d
-//!   trainer transcript <houses> <games> <seed>
+//!   trainer transcript <houses> <games> <seed> [player] [rivalry=]
 //!
 //! Every player first applies exact one-move tactics: take a win if there is
 //! one, and avoid moves that hand the opponent an immediate win. With
@@ -437,7 +437,11 @@ fn transcript(args: &[String]) {
             .map(|t| format!("[{}]", s.decks[t][..s.dlen[t]].iter().map(|c| c.to_string()).collect::<Vec<_>>().join(",")))
             .collect();
         let realm: Vec<String> = START.iter().map(|&(r, x)| s.cells[cid(r, x)].to_string()).collect();
-        let pl = if g % 2 == 0 { Player::Random } else { Player::Greedy };
+        // by default alternate the two baselines; a fourth argument names a player for both seats
+        let pl = match args.get(3) {
+            Some(spec) => load_player(spec, opt(args, "rivalry", 1.0)),
+            None => if g % 2 == 0 { Player::Random } else { Player::Greedy },
+        };
         let r = play(s, [&pl, &pl], &mut rng, None, true);
         let moves: Vec<String> = r.moves.iter().map(|(m, _)| json_move(m)).collect();
         let counts: Vec<String> = r.moves.iter().map(|(_, c)| c.to_string()).collect();

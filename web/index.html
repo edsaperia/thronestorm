@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thronestorm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+/* One visual world: a storm-dark table. A single column, opponent at the top,
+   you at the bottom, the realm between; the relics carry all the colour. */
+:root {
+  color-scheme: dark;
+  --ink: #120e17;
+  --stone: #1c1723;
+  --edge: #3b3247;
+  --bone: #ece5d8;
+  --dim: #a297ad;
+  --storm: #b5d0ff;
+  --warn: #ffb58a;
+  --display: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --gap: 6px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: radial-gradient(120% 60% at 50% 0%, #241b2e 0%, var(--ink) 60%) var(--ink);
+  background-attachment: fixed;
+  color: var(--bone);
+  font: 400 17px/1.4 var(--body);
+  min-height: 100%;
+}
+main { max-width: 600px; margin: 0 auto; padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h1 { font: 400 30px/1 var(--display); letter-spacing: .14em; margin: 0; text-wrap: balance; }
+h2 { font: 400 15px/1 var(--display); letter-spacing: .16em; color: var(--dim); margin: 0; }
+button { font: inherit; color: inherit; }
+.btn {
+  background: transparent; border: 1px solid var(--edge); border-radius: 3px;
+  padding: 7px 14px; cursor: pointer; font-weight: 500;
+}
+.btn:hover { border-color: var(--dim); }
+.btn.primary { background: var(--storm); border-color: var(--storm); color: #10131c; font-weight: 700; }
+.btn:disabled { opacity: .4; cursor: default; }
+:focus-visible { outline: 2px solid var(--storm); outline-offset: 2px; }
+
+.zone { display: flex; flex-direction: column; gap: 8px; }
+.zone-head { display: flex; justify-content: space-between; align-items: baseline; }
+.zone-head span { color: var(--dim); font-size: 14px; }
+.slots { display: grid; grid-template-columns: repeat(4, minmax(0, 62px)); gap: 8px; justify-content: center; }
+.slots { align-items: start; }
+.pile { display: grid; gap: 3px; }
+.pile small { color: var(--dim); font-size: 13px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.card, .slot {
+  position: relative; width: 100%; aspect-ratio: 10 / 13; border-radius: 5px; padding: 0;
+  display: grid; place-items: center;
+}
+.slot { border: 1px dashed var(--edge); color: var(--edge); background: transparent; }
+.slot svg { width: 46%; height: 46%; fill: currentColor; opacity: .7; }
+.card {
+  border: 1px solid rgba(0, 0, 0, .55); background: var(--h); color: var(--g);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .13), 0 2px 5px rgba(0, 0, 0, .5);
+  cursor: default;
+}
+.card svg { width: 56%; height: 56%; fill: currentColor; }
+.card .num { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font: 400 11px/1 var(--display); letter-spacing: .04em; opacity: .9; }
+button.card.can, button.slot.can { cursor: pointer; }
+.can { box-shadow: 0 0 0 2px var(--storm), 0 0 12px rgba(181, 208, 255, .55); }
+.slot.can { border-style: solid; border-color: var(--storm); color: var(--storm); }
+.sel { box-shadow: 0 0 0 3px #fff, 0 0 16px #fff; transform: translateY(-3px); }
+.inline { box-shadow: 0 0 0 2px var(--bone); }
+.fresh { animation: fresh 1.6s ease-out; }
+@keyframes fresh { 0% { box-shadow: 0 0 0 3px var(--warn), 0 0 22px var(--warn); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .fresh { animation: none; outline: 2px solid var(--warn); } .sel { transform: none; } }
+
+.realm-wrap { overflow-x: auto; background: var(--stone); border: 1px solid var(--edge); border-radius: 4px; padding: 12px 10px; }
+.realm { position: relative; margin: 0 auto; }
+.realm > * { position: absolute; width: var(--cw); }
+.realm .num { font-size: calc(var(--cw) * .2); }
+
+.h0 { --h: #8d929b; --g: #14161a; } .h1 { --h: #2c4585; --g: #fff; }
+.h2 { --h: #2b8cc2; --g: #fff; }    .h3 { --h: #17907f; --g: #fff; }
+.h4 { --h: #3d7f35; --g: #fff; }    .h5 { --h: #cfa321; --g: #17130a; }
+.h6 { --h: #cc6418; --g: #fff; }    .h7 { --h: #b3222c; --g: #fff; }
+.h8 { --h: #7537a6; --g: #fff; }    .h9 { --h: #ddd6c4; --g: #17130a; }
+
+.prompt { min-height: 2.8em; margin: 0; text-wrap: balance; }
+.prompt.warn { color: var(--warn); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.log { margin: 0; padding: 0; list-style: none; color: var(--dim); font-size: 15px; display: flex; flex-direction: column; gap: 2px; }
+.log li:first-child { color: var(--bone); }
+.chip { display: inline-block; padding: 0 5px; border-radius: 3px; background: var(--h); color: var(--g); font-weight: 500; white-space: nowrap; }
+
+.panel { background: var(--stone); border: 1px solid var(--edge); border-radius: 4px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.panel[hidden] { display: none; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg label { border: 1px solid var(--edge); border-radius: 3px; padding: 6px 12px; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; }
+.seg input:checked + span { color: var(--storm); }
+.seg label:has(input:checked) { border-color: var(--storm); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--storm); outline-offset: 2px; }
+.banner { text-align: center; border-color: var(--storm); }
+.banner strong { font: 400 24px/1.2 var(--display); letter-spacing: .08em; }
+details { color: var(--dim); font-size: 16px; max-width: 65ch; }
+details summary { cursor: pointer; color: var(--bone); font: 400 15px/1 var(--display); letter-spacing: .16em; }
+details p { margin: .6em 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="g0" viewBox="0 0 24 24"><path d="M12 1.5 14.2 5v9.5H9.8V5zM6.5 14.5h11v2.2h-11zM10.9 16.7h2.2v3.6h-2.2z"/><circle cx="12" cy="21.4" r="1.5"/></symbol>
+  <symbol id="g1" viewBox="0 0 24 24"><path d="M12 2 20 4.8v6.4c0 5-3.4 8.4-8 10.8-4.6-2.4-8-5.800-8-10.800V4.800z"/></symbol>
+  <symbol id="g2" viewBox="0 0 24 24"><path d="M12 2.500c4.700 0 8.200 3.700 8.200 8.300V21h-5.400v-5.200l1.800-1.700v-2.400H7.400v2.400l1.800 1.700V21H3.800V10.800c0-4.600 3.500-8.300 8.200-8.300z"/></symbol>
+  <symbol id="g3" viewBox="0 0 24 24"><path d="M5.500 2.500h13v4.300c0 3.300-2.300 5.800-5.300 6.400v4.600h3.600V21H7.200v-3.200h3.600v-4.600c-3-.6-5.300-3.100-5.300-6.400z"/></symbol>
+</svg>
+<main>
+  <header>
+    <h1>Thronestorm</h1>
+    <button class="btn" id="new-open" type="button">New game</button>
+  </header>
+
+  <section class="panel" id="new-panel" hidden>
+    <div class="field">
+      <h2>Opponent</h2>
+      <div class="seg" id="strength">
+        <label><input type="radio" name="strength" id="st1" value="1"><span>Squire</span></label>
+        <label><input type="radio" name="strength" id="st2" value="2"><span>Knight</span></label>
+        <label><input type="radio" name="strength" id="st4" value="4" checked><span>Regent</span></label>
+      </div>
+    </div>
+    <div class="field">
+      <h2>First move</h2>
+      <div class="seg" id="first">
+        <label><input type="radio" name="first" id="f0" value="0" checked><span>You</span></label>
+        <label><input type="radio" name="first" id="f1" value="1"><span>Opponent</span></label>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="new-go" type="button">Deal a new game</button>
+      <button class="btn" id="new-cancel" type="button">Keep playing</button>
+    </div>
+  </section>
+
+  <section class="panel banner" id="banner" hidden>
+    <strong id="banner-text"></strong>
+    <div class="actions" style="justify-content:center"><button class="btn primary" id="banner-new" type="button">Play again</button></div>
+  </section>
+
+  <section class="zone">
+    <div class="zone-head"><h2>Opponent</h2><span id="opp-note"></span></div>
+    <div class="slots" id="opp"></div>
+  </section>
+
+  <section class="zone">
+    <div class="zone-head"><h2>Realm</h2><span>your row is the bottom one</span></div>
+    <div class="realm-wrap" id="realm-wrap"><div class="realm" id="realm"></div></div>
+  </section>
+
+  <section class="zone">
+    <div class="zone-head"><h2>Reliquary</h2><span>face-up relics, and how many lie beneath</span></div>
+    <div class="slots" id="reliquary"></div>
+  </section>
+
+  <section class="zone">
+    <div class="zone-head"><h2>Your relics</h2><span>one of each kind</span></div>
+    <div class="slots" id="me"></div>
+  </section>
+
+  <p class="prompt" id="prompt" aria-live="polite"></p>
+  <div class="actions" id="actions"></div>
+  <ul class="log" id="log" aria-label="Recent moves"></ul>
+
+  <details>
+    <summary>How to play</summary>
+    <p>Ten noble houses each have four relics: a sword, a shield, a helmet and a chalice. Hold all four relics of one house at the end of your turn and you win.</p>
+    <p><b>Claim.</b> Take a face-up relic from the reliquary. You may hold only one of each kind, so if you now have two, send either one to the realm. It goes at the left or right end of a row, and a column must be full before the next one starts.</p>
+    <p><b>Plot.</b> If a relic on your row belongs to the same house as one you hold, you may plot with a diagonal rising from it. Pick up its three relics and put three back, in any order, from those and your own. You must still end with one of each kind.</p>
+    <p>Your opponent sits opposite, so their row is the top one. You may also pass.</p>
+  </details>
+</main>
+
+<script>// Thronestorm rules, features, value network and move chooser.
+// A port of trainer/src/{game,net,main}.rs; tests/web_check.js verifies it
+// against the Rust trainer. Runs in a browser (window.TS) or under Node.
+(function (root) {
+  'use strict';
+  const XM = 40, W = 2 * XM + 1, NC = 3 * W, NONE = 255, MAXH = 12;
+  const F = 27, G = 20, D1 = 32, D2 = 64, POOL_SCALE = 0.25;
+  const CHECKED = 6, DEEP = 30;
+  const START = [[0, 0], [1, -1], [1, 1], [2, 0]];
+  const cid = (r, x) => r * W + x + XM;
+  const house = (c) => c >> 2;
+  const ctype = (c) => c & 3;
+
+  function newState(n, rand) {
+    const s = {
+      n, cells: new Uint8Array(NC).fill(NONE), lo: -1, hi: 1,
+      hands: [new Uint8Array(4).fill(NONE), new Uint8Array(4).fill(NONE)],
+      decks: [], dlen: [n, n, n, n], revealed: [true, true, true, true],
+      toMove: 0, winner: -1,
+    };
+    for (let t = 0; t < 4; t++) {
+      const d = [];
+      for (let h = 0; h < n; h++) d.push(h * 4 + t);
+      for (let i = n - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [d[i], d[j]] = [d[j], d[i]];
+      }
+      s.decks.push(d);
+    }
+    for (const [r, x] of START) {
+      s.dlen[3] -= 1;
+      s.cells[cid(r, x)] = s.decks[3][s.dlen[3]];
+    }
+    return s;
+  }
+
+  function clone(s) {
+    return {
+      n: s.n, cells: s.cells.slice(), lo: s.lo, hi: s.hi,
+      hands: [s.hands[0].slice(), s.hands[1].slice()],
+      decks: s.decks, dlen: s.dlen.slice(), revealed: s.revealed.slice(),
+      toMove: s.toMove, winner: s.winner,
+    };
+  }
+
+  function handWins(h) {
+    if (h[0] === NONE) return false;
+    const a = house(h[0]);
+    for (let i = 1; i < 4; i++) if (h[i] === NONE || house(h[i]) !== a) return false;
+    return true;
+  }
+  function handMask(h) {
+    let m = 0;
+    for (let i = 0; i < 4; i++) if (h[i] !== NONE) m |= 1 << house(h[i]);
+    return m;
+  }
+  function faceUp(s, t) {
+    return s.dlen[t] > 0 && s.revealed[t] ? s.decks[t][s.dlen[t] - 1] : NONE;
+  }
+  function openSlots(s) {
+    const out = [];
+    for (const sign of [-1, 1]) {
+      for (let k = 1; ; k++) {
+        const x = sign * (k + 1);
+        const before = out.length;
+        if (k % 2 === 1) {
+          for (const r of [0, 2]) if (s.cells[cid(r, x)] === NONE) out.push([r, x]);
+        } else if (s.cells[cid(1, x)] === NONE) out.push([1, x]);
+        if (out.length > before) break;
+      }
+    }
+    return out;
+  }
+  const evenStart = (lo) => lo - (((lo % 2) + 2) % 2);
+
+  // Complete lines as [p's bottom cell, middle, p's top cell].
+  function lines(s, p) {
+    const out = [];
+    const b = p === 0 ? 2 : 0, t = 2 - b;
+    for (let x = evenStart(s.lo); x <= s.hi; x += 2) {
+      if (s.cells[cid(b, x)] === NONE) continue;
+      for (const d of [-1, 1]) {
+        if (s.cells[cid(1, x + d)] !== NONE && s.cells[cid(t, x + 2 * d)] !== NONE) {
+          out.push([[b, x], [1, x + d], [t, x + 2 * d]]);
+        }
+      }
+    }
+    return out;
+  }
+
+  function finish(s, p) {
+    if (handWins(s.hands[p])) s.winner = p;
+    s.toMove = 1 - p;
+    return s;
+  }
+
+  // Every legal move with its resulting state. A claim leaves the next relic
+  // of that deck face down; call flip() on the chosen state to reveal it.
+  function successors(s) {
+    const out = [];
+    if (s.winner >= 0) return out;
+    const p = s.toMove;
+    out.push({ s: finish(clone(s), p), m: ['pass'] });
+    let slots = null;
+    for (let t = 0; t < 4; t++) {
+      const c = faceUp(s, t);
+      if (c === NONE) continue;
+      const held = s.hands[p][t];
+      if (held === NONE) {
+        const n = clone(s);
+        n.dlen[t] -= 1; n.revealed[t] = false; n.hands[p][t] = c;
+        out.push({ s: finish(n, p), m: ['claim', t, null, null] });
+      } else {
+        if (!slots) slots = openSlots(s);
+        for (const played of [c, held]) {
+          for (const slot of slots) {
+            const n = clone(s);
+            n.dlen[t] -= 1; n.revealed[t] = false;
+            n.hands[p][t] = played === c ? held : c;
+            n.cells[cid(slot[0], slot[1])] = played;
+            n.lo = Math.min(n.lo, slot[1]); n.hi = Math.max(n.hi, slot[1]);
+            out.push({ s: finish(n, p), m: ['claim', t, played, slot] });
+          }
+        }
+      }
+    }
+    const mask = handMask(s.hands[p]);
+    if (mask === 0) return out;
+    for (const line of lines(s, p)) {
+      const ids = line.map(([r, x]) => cid(r, x));
+      const c = ids.map((id) => s.cells[id]);
+      if ((mask & (1 << house(c[0]))) === 0) continue;
+      const pool = c.slice();
+      for (let i = 0; i < 4; i++) if (s.hands[p][i] !== NONE) pool.push(s.hands[p][i]);
+      const m = pool.length;
+      for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) {
+        if (j === i) continue;
+        for (let k = 0; k < m; k++) {
+          if (k === i || k === j || (i === 0 && j === 1 && k === 2)) continue;
+          const nh = [NONE, NONE, NONE, NONE];
+          let ok = true;
+          for (let q = 0; q < m; q++) {
+            if (q === i || q === j || q === k) continue;
+            const card = pool[q];
+            if (nh[ctype(card)] !== NONE) { ok = false; break; }
+            nh[ctype(card)] = card;
+          }
+          if (!ok) continue;
+          const placed = [pool[i], pool[j], pool[k]];
+          const n = clone(s);
+          n.hands[p].set(nh);
+          for (let q = 0; q < 3; q++) n.cells[ids[q]] = placed[q];
+          out.push({ s: finish(n, p), m: ['plot', line, placed] });
+        }
+      }
+    }
+    return out;
+  }
+
+  function flip(s) { s.revealed = [true, true, true, true]; }
+
+  // Could p win with one move from here, using only visible relics?
+  function canWinNow(s, p) {
+    const hand = s.hands[p];
+    for (let t = 0; t < 4; t++) {
+      const c = faceUp(s, t);
+      if (c === NONE) continue;
+      let all = true;
+      for (let u = 0; u < 4; u++) {
+        if (u !== t && (hand[u] === NONE || house(hand[u]) !== house(c))) { all = false; break; }
+      }
+      if (all) return true;
+    }
+    for (let i = 0; i < 4; i++) if (hand[i] === NONE) return false;
+    const mask = handMask(hand);
+    const cnt = new Uint8Array(MAXH);
+    for (let i = 0; i < 4; i++) cnt[house(hand[i])]++;
+    const b = p === 0 ? 2 : 0, t = 2 - b;
+    for (let x = evenStart(s.lo); x <= s.hi; x += 2) {
+      const c0 = s.cells[cid(b, x)];
+      if (c0 === NONE || (mask & (1 << house(c0))) === 0) continue;
+      for (const d of [-1, 1]) {
+        const c1 = s.cells[cid(1, x + d)], c2 = s.cells[cid(t, x + 2 * d)];
+        if (c1 === NONE || c2 === NONE) continue;
+        let hit = false;
+        for (const c of [c0, c1, c2]) { if (++cnt[house(c)] === 4) hit = true; }
+        for (const c of [c0, c1, c2]) cnt[house(c)]--;
+        if (hit) return true;
+      }
+    }
+    return false;
+  }
+
+  function top2(v, live, n) {
+    let a = 0, b = 0;
+    for (let h = 0; h < n; h++) {
+      if (!live[h]) continue;
+      if (v[h] > a) { b = a; a = v[h]; } else if (v[h] > b) b = v[h];
+    }
+    return [a, b];
+  }
+
+  function features(s) {
+    const me = s.toMove, o = 1 - me, n = s.n;
+    const z = () => new Array(MAXH).fill(0);
+    const hand = [z(), z()], face = z(), hidden = z(), realm = z(), keys = [z(), z()];
+    let nFace = 0, nHidden = 0;
+    const deckHidden = [0, 0, 0, 0];
+    const isHidden = new Uint8Array(MAXH * 4);
+    for (let p = 0; p < 2; p++) for (let i = 0; i < 4; i++) {
+      const c = s.hands[p][i];
+      if (c !== NONE) hand[p][house(c)]++;
+    }
+    for (let t = 0; t < 4; t++) for (let i = 0; i < s.dlen[t]; i++) {
+      const c = s.decks[t][i];
+      if (i + 1 === s.dlen[t] && s.revealed[t]) { face[house(c)]++; nFace++; }
+      else { hidden[house(c)]++; nHidden++; deckHidden[t]++; isHidden[c] = 1; }
+    }
+    for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) {
+      const c = s.cells[cid(r, x)];
+      if (c === NONE) continue;
+      realm[house(c)]++;
+      if (r === 2) keys[0][house(c)]++;
+      if (r === 0) keys[1][house(c)]++;
+    }
+    const lns = [[], []], usable = [[], []], reach = [z(), z()];
+    const seen = [new Uint8Array(NC), new Uint8Array(NC)];
+    for (let p = 0; p < 2; p++) {
+      const mask = handMask(s.hands[p]);
+      for (const line of lines(s, p)) {
+        const ids = line.map(([r, x]) => cid(r, x));
+        const ok = (mask & (1 << house(s.cells[ids[0]]))) !== 0;
+        if (ok) for (const id of ids) {
+          if (!seen[p][id]) { seen[p][id] = 1; reach[p][house(s.cells[id])]++; }
+        }
+        lns[p].push(ids); usable[p].push(ok);
+      }
+    }
+    const pool = [hand[0].slice(), hand[1].slice()];
+    const safe = [hand[0].slice(), hand[1].slice()];
+    const potential = [hand[0].slice(), hand[1].slice()];
+    for (let p = 0; p < 2; p++) {
+      lns[p].forEach((ids, li) => {
+        const ok = usable[p][li];
+        const contested = ids.some((id) => seen[1 - p][id]);
+        const cnt = z();
+        for (const id of ids) cnt[house(s.cells[id])]++;
+        for (let h = 0; h < n; h++) {
+          if (cnt[h] <= 0) continue;
+          const v = hand[p][h] + cnt[h];
+          potential[p][h] = Math.max(potential[p][h], v);
+          if (ok) {
+            pool[p][h] = Math.max(pool[p][h], v);
+            if (!contested) safe[p][h] = Math.max(safe[p][h], v);
+          }
+        }
+      });
+    }
+    const out = [z(), z()];
+    for (let p = 0; p < 2; p++) for (let t = 0; t < 4; t++) {
+      const others = [];
+      for (let u = 0; u < 4; u++) if (u !== t) others.push(s.hands[p][u]);
+      if (others.every((c) => c !== NONE && house(c) === house(others[0]))) {
+        const h = house(others[0]);
+        if (isHidden[h * 4 + t]) out[p][h] = 1 / Math.max(deckHidden[t], 1);
+      }
+    }
+    const b = (v) => (v ? 1 : 0);
+    const live = [[], []];
+    for (let h = 0; h < n; h++) { live[me][h] = hand[o][h] === 0; live[o][h] = hand[me][h] === 0; }
+    const houses = new Float32Array(n * F);
+    for (let h = 0; h < n; h++) {
+      const ml = b(live[me][h]), ol = b(live[o][h]);
+      houses.set([
+        hand[me][h] / 4, hand[o][h] / 4, face[h] / 4, hidden[h] / 4, realm[h] / 4,
+        pool[me][h] / 4, pool[o][h] / 4, reach[me][h] / 4, reach[o][h] / 4, ml, ol,
+        keys[me][h] / 4, keys[o][h] / 4,
+        b(hand[me][h] >= 2), b(hand[me][h] >= 3), b(hand[o][h] >= 2), b(hand[o][h] >= 3),
+        b(pool[me][h] >= 3), b(pool[o][h] >= 3),
+        ml * pool[me][h] / 4, ol * pool[o][h] / 4,
+        ml * potential[me][h] / 4, ol * potential[o][h] / 4,
+        ml * safe[me][h] / 4, ol * safe[o][h] / 4,
+        out[me][h], out[o][h],
+      ], h * F);
+    }
+    const size = (p) => { let k = 0; for (let i = 0; i < 4; i++) if (s.hands[p][i] !== NONE) k++; return k / 4; };
+    const div = (p) => { let m = handMask(s.hands[p]), k = 0; while (m) { k += m & 1; m >>= 1; } return k / 4; };
+    const count = (p) => usable[p].filter(Boolean).length / 20;
+    const [mp1, mp2] = top2(pool[me], live[me], n), [op1, op2] = top2(pool[o], live[o], n);
+    const [ms1, ms2] = top2(safe[me], live[me], n), [os1, os2] = top2(safe[o], live[o], n);
+    const global = new Float32Array([
+      size(me), size(o), count(me), count(o), lns[0].length / 20, nHidden / 36, nFace / 4,
+      b(canWinNow(s, me)), b(canWinNow(s, o)), 1, div(me), div(o),
+      mp1 / 4, mp2 / 4, op1 / 4, op2 / 4, ms1 / 4, ms2 / 4, os1 / 4, os2 / 4,
+    ]);
+    return { houses, global, n };
+  }
+
+  const O_W1 = 0, O_B1 = O_W1 + F * D1, O_W2 = O_B1 + D1, O_B2 = O_W2 + (D1 + G) * D2;
+  const O_W3 = O_B2 + D2, O_B3 = O_W3 + D2 * 2, NP = O_B3 + 2;
+
+  function loadNet(bytes) {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const dims = [0, 4, 8, 12].map((o) => dv.getUint32(o, true));
+    if (dims[0] !== F || dims[1] !== G || dims[2] !== D1 || dims[3] !== D2 + 1000) throw new Error('network shape');
+    const p = new Float32Array(NP);
+    for (let i = 0; i < NP; i++) p[i] = dv.getFloat32(16 + i * 4, true);
+    return p;
+  }
+
+  // [chance the player to move wins, chance the other player wins]
+  function evalNet(p, f) {
+    const z = new Float32Array(D1 + G);
+    for (let h = 0; h < f.n; h++) {
+      for (let j = 0; j < D1; j++) {
+        let a = p[O_B1 + j];
+        for (let i = 0; i < F; i++) a += f.houses[h * F + i] * p[O_W1 + i * D1 + j];
+        z[j] += Math.tanh(a) * POOL_SCALE;
+      }
+    }
+    z.set(f.global, D1);
+    const h2 = new Float32Array(D2);
+    for (let j = 0; j < D2; j++) {
+      let a = p[O_B2 + j];
+      for (let i = 0; i < D1 + G; i++) a += z[i] * p[O_W2 + i * D2 + j];
+      h2[j] = Math.tanh(a);
+    }
+    const v = [0, 0];
+    for (let k = 0; k < 2; k++) {
+      let a = p[O_B3 + k];
+      for (let j = 0; j < D2; j++) a += h2[j] * p[O_W3 + j * 2 + k];
+      v[k] = 1 / (1 + Math.exp(-a));
+    }
+    return v;
+  }
+
+  // `after` is the position just after `attacker` moved. True if he threatens
+  // to win and every reply still leaves him a winning move.
+  function forcedWin(after, attacker) {
+    if (after.winner >= 0 || !canWinNow(after, attacker)) return false;
+    return successors(after).every((r) => r.s.winner < 0 && canWinNow(r.s, attacker));
+  }
+  function hasForcingWin(s, me) {
+    if (canWinNow(s, me)) return true;
+    return successors(s).some((t) => forcedWin(t.s, me));
+  }
+  function forcedWin3(after, attacker) {
+    if (after.winner >= 0 || canWinNow(after, 1 - attacker)) return false;
+    return successors(after).every((r) => r.s.winner < 0 && hasForcingWin(r.s, attacker));
+  }
+
+  // Index of the move to play. opts: { net, depth (1-4), rivalry }
+  function choose(s, succ, opts) {
+    const p = s.toMove, { net, depth, rivalry } = opts;
+    const win = succ.findIndex((t) => t.s.winner === p);
+    if (win >= 0) return win;
+    let cands = [];
+    for (let i = 0; i < succ.length; i++) if (!canWinNow(succ[i].s, 1 - p)) cands.push(i);
+    if (!cands.length) cands = succ.map((_, i) => i);
+    if (depth >= 2) {
+      const f = cands.find((i) => forcedWin(succ[i].s, p));
+      if (f !== undefined) return f;
+    }
+    const score = (st) => { const v = evalNet(net, features(st)); return rivalry * v[0] - v[1]; };
+    const scored = cands.map((i) => [score(succ[i].s), i]).sort((a, b) => a[0] - b[0]);
+    if (depth >= 3) {
+      const f = scored.slice(0, DEEP).find(([, i]) => forcedWin3(succ[i].s, p));
+      if (f) return f[1];
+    }
+    if (depth >= 2) {
+      for (const [, i] of scored.slice(0, CHECKED)) {
+        const theirs = successors(succ[i].s);
+        let bad = theirs.some((t) => !canWinNow(t.s, p) && forcedWin(t.s, 1 - p));
+        if (!bad && depth >= 4) {
+          const rated = [];
+          theirs.forEach((t, j) => { if (t.s.winner < 0) rated.push([score(t.s), j]); });
+          rated.sort((a, b) => a[0] - b[0]);
+          bad = rated.slice(0, DEEP).some(([, j]) => forcedWin3(theirs[j].s, 1 - p));
+        }
+        if (!bad) return i;
+      }
+    }
+    return scored[0][1];
+  }
+
+  const api = {
+    NONE, START, cid, house, ctype, newState, clone, faceUp, openSlots, lines,
+    successors, flip, canWinNow, handWins, handMask, features, loadNet, evalNet, choose,
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.TS = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+(function () {
+  'use strict';
+  const NONE = TS.NONE, house = TS.house, ctype = TS.ctype;
+  const KIND = ['sword', 'shield', 'helmet', 'chalice'];
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  const NET = TS.loadNet(Uint8Array.from(atob('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'), (c) => c.charCodeAt(0)));
+  const $ = (id) => document.getElementById(id);
+  const key = (r, x) => r + ',' + x;
+  const nameOf = (c) => `${KIND[ctype(c)]} of House ${ROMAN[house(c)]}`;
+  const chip = (c) => `<span class="chip h${house(c)}">${ROMAN[house(c)]} ${KIND[ctype(c)]}</span>`;
+  const glyph = (t) => `<svg aria-hidden="true"><use href="#g${t}"/></svg>`;
+
+  let G; // { s, depth, mode, pick, plot, log, fresh, note, warn }
+
+  function deal(depth, first) {
+    const s = TS.newState(10, Math.random);
+    s.toMove = first;
+    G = { s, depth, mode: 'idle', pick: null, plot: null, log: [], fresh: {}, note: '', warn: false };
+    $('banner').hidden = true;
+    render();
+    if (first === 1) opponentSoon();
+  }
+
+  // ----- drawing -----
+
+  function cardHtml(c, attrs, cls) {
+    const tag = attrs ? 'button type="button"' : 'div';
+    return `<${tag} class="card h${house(c)} ${cls || ''}" ${attrs || ''} aria-label="${nameOf(c)}">${glyph(ctype(c))}<span class="num">${ROMAN[house(c)]}</span></${tag.split(' ')[0]}>`;
+  }
+  function slotHtml(t, attrs, cls) {
+    const tag = attrs ? 'button type="button"' : 'div';
+    const label = t === null ? 'empty place in the realm' : `no ${KIND[t]}`;
+    return `<${tag} class="slot ${cls || ''}" ${attrs || ''} aria-label="${label}">${t === null ? '' : glyph(t)}</${tag.split(' ')[0]}>`;
+  }
+
+  function triggers() {
+    // x of each relic on my row that I can plot from, with its complete diagonals
+    const out = {};
+    if (G.mode !== 'idle' || G.s.toMove !== 0 || G.s.winner >= 0) return out;
+    const mask = TS.handMask(G.s.hands[0]);
+    for (const line of TS.lines(G.s, 0)) {
+      const c = G.s.cells[TS.cid(line[0][0], line[0][1])];
+      if (mask & (1 << house(c))) (out[line[0][1]] = out[line[0][1]] || []).push(line);
+    }
+    return out;
+  }
+
+  function render() {
+    const s = G.s, myTurn = s.toMove === 0 && s.winner < 0;
+    const hand = G.plot ? G.plot.hand : s.hands[0];
+
+    $('opp').innerHTML = [0, 1, 2, 3].map((t) => {
+      const c = s.hands[1][t];
+      return c === NONE ? slotHtml(t) : cardHtml(c, null, G.fresh['o' + t] ? 'fresh' : '');
+    }).join('');
+
+    $('me').innerHTML = [0, 1, 2, 3].map((t) => {
+      const c = hand[t];
+      let cls = G.fresh['m' + t] ? 'fresh' : '', live = false;
+      if (G.mode === 'plot') { live = true; if (G.pick && G.pick.k === 'hand' && G.pick.t === t) cls += ' sel'; }
+      if (G.mode === 'claim-choose' && G.pick.t === t) { live = true; cls += ' can'; }
+      const attrs = live ? `data-act="hand" data-t="${t}"` : null;
+      return c === NONE ? slotHtml(t, attrs, cls) : cardHtml(c, attrs, cls);
+    }).join('');
+
+    $('reliquary').innerHTML = [0, 1, 2, 3].map((t) => {
+      const c = TS.faceUp(s, t), left = Math.max(0, s.dlen[t] - 1);
+      let inner;
+      if (c === NONE) inner = slotHtml(t);
+      else {
+        let cls = G.fresh['d' + t] ? 'fresh' : '', attrs = null;
+        if (myTurn && G.mode === 'idle') { attrs = `data-act="claim" data-t="${t}"`; cls += ' can'; }
+        if (G.mode === 'claim-choose' && G.pick.t === t) { attrs = `data-act="claim" data-t="${t}"`; cls += ' can'; }
+        if (G.mode === 'claim-place' && G.pick.t === t && G.pick.played === c) cls += ' sel';
+        inner = cardHtml(c, attrs, cls);
+      }
+      return `<div class="pile">${inner}<small>${c === NONE ? 'empty' : left + ' more'}</small></div>`;
+    }).join('');
+
+    renderRealm();
+
+    // prompt, buttons, log
+    let text = G.note, buttons = '';
+    if (s.winner >= 0) text = '';
+    else if (!myTurn) text = text || 'The opponent is thinking.';
+    else if (G.mode === 'idle') {
+      text = text || 'Your turn. Claim a relic from the reliquary, or tap a glowing relic on your row to plot.';
+      buttons = '<button class="btn" type="button" data-act="pass">Pass</button>';
+    } else if (G.mode === 'claim-choose') {
+      text = text || `You already hold a ${KIND[G.pick.t]}. Tap the one to send to the realm.`;
+      buttons = '<button class="btn" type="button" data-act="cancel">Cancel</button>';
+    } else if (G.mode === 'claim-place') {
+      text = text || 'Tap a glowing place in the realm.';
+      buttons = '<button class="btn" type="button" data-act="cancel">Cancel</button>';
+    } else if (G.mode === 'plot-pick') {
+      text = text || 'Two diagonals rise from that relic. Tap another relic on the one you want.';
+      buttons = '<button class="btn" type="button" data-act="cancel">Cancel</button>';
+    } else if (G.mode === 'plot') {
+      text = text || 'Tap two relics to swap them: within the diagonal, or between the diagonal and your own.';
+      const ready = G.plot.cells.every((c) => c !== NONE) && G.plot.cells.some((c, i) => c !== G.plot.orig[i]);
+      buttons = `<button class="btn primary" type="button" data-act="confirm" ${ready ? '' : 'disabled'}>Confirm plot</button>
+                 <button class="btn" type="button" data-act="cancel">Cancel</button>`;
+    }
+    $('prompt').textContent = text;
+    $('prompt').className = 'prompt' + (G.warn ? ' warn' : '');
+    $('actions').innerHTML = buttons;
+    $('log').innerHTML = G.log.slice(0, 5).map((l) => `<li>${l}</li>`).join('');
+    $('opp-note').textContent = ['', 'Squire', 'Knight', '', 'Regent'][G.depth] || '';
+    G.note = ''; G.warn = false;
+  }
+
+  function renderRealm() {
+    const s = G.s, trig = triggers();
+    const open = TS.openSlots(s);
+    let lo = s.lo, hi = s.hi;
+    for (const [, x] of open) { lo = Math.min(lo, x); hi = Math.max(hi, x); }
+    const wrap = $('realm-wrap'), el = $('realm');
+    const avail = Math.max(240, wrap.clientWidth - 22);
+    const cols = (hi - lo) / 2 + 1, gap = 6;
+    const cw = Math.max(34, Math.min(62, Math.floor(avail / cols) - gap));
+    const ch = Math.round(cw * 1.3);
+    el.style.setProperty('--cw', cw + 'px');
+    el.style.width = Math.ceil(cols * (cw + gap) - gap) + 'px';
+    el.style.height = 3 * ch + 2 * gap + 'px';
+    const pos = (r, x) => `style="left:${((x - lo) / 2) * (cw + gap)}px;top:${r * (ch + gap)}px"`;
+    const inLine = {};
+    if (G.plot) G.plot.line.forEach(([r, x], i) => { inLine[key(r, x)] = i; });
+    const pickable = {};
+    if (G.mode === 'plot-pick') G.pick.lines.forEach((line, li) => { for (const [r, x] of line.slice(1)) pickable[key(r, x)] = li; });
+    let html = '';
+    for (let x = lo; x <= hi; x++) for (let r = 0; r < 3; r++) {
+      let c = s.cells[TS.cid(r, x)];
+      const k = key(r, x);
+      if (k in inLine) c = G.plot.cells[inLine[k]];
+      if (c === NONE && !(k in inLine)) continue;
+      let cls = G.fresh[k] ? 'fresh' : '', attrs = null;
+      if (k in inLine) {
+        attrs = `data-act="cell" data-i="${inLine[k]}"`;
+        cls += G.pick && G.pick.k === 'cell' && G.pick.i === inLine[k] ? ' sel' : ' inline';
+      } else if (G.mode === 'idle' && r === 2 && trig[x]) { attrs = `data-act="trigger" data-x="${x}"`; cls += ' can'; }
+      else if (k in pickable) { attrs = `data-act="line" data-li="${pickable[k]}"`; cls += ' can'; }
+      else if (G.mode === 'plot-pick' && r === 2 && x === G.pick.x) cls += ' sel';
+      html += c === NONE ? slotHtml(null, attrs + ' ' + pos(r, x), cls) : cardHtml(c, attrs ? attrs + ' ' + pos(r, x) : null, cls).replace('<div class', `<div ${pos(r, x)} class`);
+    }
+    if (G.mode === 'claim-place') {
+      for (const [r, x] of open) html += slotHtml(null, `data-act="place" data-r="${r}" data-x="${x}" ${pos(r, x)}`, 'can');
+    }
+    el.innerHTML = html;
+  }
+
+  // ----- playing moves -----
+
+  function describe(who, before, m, after) {
+    const p = before.toMove, You = who === 0;
+    if (m[0] === 'pass') return You ? 'You pass.' : 'The opponent passes.';
+    if (m[0] === 'claim') {
+      const c = TS.faceUp(before, m[1]);
+      if (m[2] === null) return `${You ? 'You claim' : 'The opponent claims'} the ${chip(c)}.`;
+      if (m[2] === c) return `${You ? 'You send' : 'The opponent sends'} the ${chip(c)} straight to the realm.`;
+      return `${You ? 'You claim' : 'The opponent claims'} the ${chip(c)} and ${You ? 'send' : 'sends'} the ${chip(m[2])} to the realm.`;
+    }
+    const had = Array.from(before.hands[p]).filter((c) => c !== NONE);
+    const took = Array.from(after.hands[p]).filter((c) => c !== NONE && !had.includes(c));
+    const left = had.filter((c) => !Array.from(after.hands[p]).includes(c));
+    if (!took.length) return `${You ? 'You rearrange' : 'The opponent rearranges'} a diagonal.`;
+    return `${You ? 'You plot: take' : 'The opponent plots: takes'} ${took.map(chip).join(' ')}, ${You ? 'leave' : 'leaves'} ${left.map(chip).join(' ')}.`;
+  }
+
+  function play(m) {
+    const before = G.s, who = before.toMove;
+    const succ = TS.successors(before);
+    const hit = succ.find((t) => JSON.stringify(t.m) === JSON.stringify(m));
+    if (!hit) { G.note = 'That move is not allowed.'; G.warn = true; render(); return false; }
+    commit(before, hit, who);
+    return true;
+  }
+
+  function commit(before, hit, who) {
+    const after = hit.s;
+    TS.flip(after);
+    const fresh = {};
+    for (let x = after.lo; x <= after.hi; x++) for (let r = 0; r < 3; r++) {
+      if (after.cells[TS.cid(r, x)] !== before.cells[TS.cid(r, x)]) fresh[key(r, x)] = 1;
+    }
+    for (let t = 0; t < 4; t++) {
+      if (after.hands[0][t] !== before.hands[0][t]) fresh['m' + t] = 1;
+      if (after.hands[1][t] !== before.hands[1][t]) fresh['o' + t] = 1;
+      if (TS.faceUp(after, t) !== TS.faceUp(before, t)) fresh['d' + t] = 1;
+    }
+    G.log.unshift(describe(who, before, hit.m, after));
+    G.s = after; G.fresh = fresh; G.mode = 'idle'; G.pick = null; G.plot = null;
+    if (after.winner >= 0) {
+      const h = ROMAN[house(after.hands[after.winner][0])];
+      $('banner-text').textContent = after.winner === 0 ? `You have united House ${h}.` : `The opponent has united House ${h}.`;
+      $('banner').hidden = false;
+    }
+    render();
+    if (after.winner < 0 && after.toMove === 1) opponentSoon();
+  }
+
+  function opponentSoon() {
+    setTimeout(() => {
+      const s = G.s;
+      if (s.winner >= 0 || s.toMove !== 1) return;
+      const succ = TS.successors(s);
+      const i = TS.choose(s, succ, { net: NET, depth: G.depth, rivalry: 0 });
+      commit(s, succ[i], 1);
+    }, 500);
+  }
+
+  function startPlot(line) {
+    G.mode = 'plot'; G.pick = null;
+    const cells = line.map(([r, x]) => G.s.cells[TS.cid(r, x)]);
+    G.plot = { line, cells, orig: cells.slice(), hand: Array.from(G.s.hands[0]) };
+  }
+
+  // Move the relic on diagonal place i into my hand and relic b (or nothing) onto the diagonal.
+  function exchange(i, b) {
+    const P = G.plot, a = P.cells[i], nh = P.hand.slice();
+    if (b !== NONE) nh[ctype(b)] = NONE;
+    if (a !== NONE) {
+      if (nh[ctype(a)] !== NONE) {
+        G.note = `You would hold two ${KIND[ctype(a)]}s. Swap it with your own ${KIND[ctype(a)]}, or put that one down first.`;
+        G.warn = true;
+        return;
+      }
+      nh[ctype(a)] = a;
+    }
+    P.cells[i] = b; P.hand = nh;
+  }
+
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const act = el.dataset.act, s = G.s;
+    if (s.winner >= 0 || s.toMove !== 0) return;
+    if (act === 'pass') return void play(['pass']);
+    if (act === 'cancel') { G.mode = 'idle'; G.pick = null; G.plot = null; return render(); }
+    if (act === 'claim') {
+      const t = +el.dataset.t, c = TS.faceUp(s, t);
+      if (G.mode === 'idle') {
+        if (s.hands[0][t] === NONE) return void play(['claim', t, null, null]);
+        G.mode = 'claim-choose'; G.pick = { t };
+      } else if (G.mode === 'claim-choose') { G.mode = 'claim-place'; G.pick = { t, played: c }; }
+      return render();
+    }
+    if (act === 'hand') {
+      const t = +el.dataset.t;
+      if (G.mode === 'claim-choose') { G.mode = 'claim-place'; G.pick = { t, played: s.hands[0][t] }; return render(); }
+      if (G.mode === 'plot') {
+        const P = G.plot;
+        if (G.pick && G.pick.k === 'cell') { exchange(G.pick.i, P.hand[t]); G.pick = null; }
+        else if (G.pick && G.pick.k === 'hand' && G.pick.t === t) G.pick = null;
+        else if (P.hand[t] !== NONE) G.pick = { k: 'hand', t };
+        return render();
+      }
+    }
+    if (act === 'place') return void play(['claim', G.pick.t, G.pick.played, [+el.dataset.r, +el.dataset.x]]);
+    if (act === 'trigger') {
+      const x = +el.dataset.x, lines = triggers()[x];
+      if (lines.length === 1) startPlot(lines[0]);
+      else { G.mode = 'plot-pick'; G.pick = { x, lines }; }
+      return render();
+    }
+    if (act === 'line') { startPlot(G.pick.lines[+el.dataset.li]); return render(); }
+    if (act === 'cell') {
+      const i = +el.dataset.i, P = G.plot;
+      if (!G.pick) { if (P.cells[i] !== NONE) G.pick = { k: 'cell', i }; }
+      else if (G.pick.k === 'cell') {
+        if (G.pick.i !== i) [P.cells[i], P.cells[G.pick.i]] = [P.cells[G.pick.i], P.cells[i]];
+        G.pick = null;
+      } else { exchange(i, P.hand[G.pick.t]); G.pick = null; }
+      return render();
+    }
+    if (act === 'confirm') return void play(['plot', G.plot.line, G.plot.cells.slice()]);
+  });
+
+  const openNew = () => { $('new-panel').hidden = false; $('new-go').focus(); };
+  $('new-open').addEventListener('click', openNew);
+  $('banner-new').addEventListener('click', openNew);
+  $('new-cancel').addEventListener('click', () => { $('new-panel').hidden = true; });
+  $('new-go').addEventListener('click', () => {
+    $('new-panel').hidden = true;
+    deal(+document.querySelector('input[name=strength]:checked').value, +document.querySelector('input[name=first]:checked').value);
+  });
+  window.addEventListener('resize', () => { if (G) renderRealm(); });
+
+  // Keep the game across a republish of this page.
+  const pack = () => ({
+    v: 1, depth: G.depth, log: G.log.slice(0, 5),
+    s: { ...G.s, cells: Array.from(G.s.cells), hands: G.s.hands.map((h) => Array.from(h)) },
+  });
+  function start(saved) {
+    if (saved && saved.v === 1 && saved.s) {
+      const s = saved.s;
+      G = {
+        s: { ...s, cells: Uint8Array.from(s.cells), hands: s.hands.map((h) => Uint8Array.from(h)) },
+        depth: saved.depth, mode: 'idle', pick: null, plot: null, log: saved.log || [], fresh: {}, note: '', warn: false,
+      };
+      render();
+      if (G.s.winner < 0 && G.s.toMove === 1) opponentSoon();
+    } else deal(4, 0);
+  }
+  const hot = window.claude && window.claude.hot;
+  if (hot && hot.snapshot) hot.snapshot(pack);
+  if (hot && hot.ready) hot.ready(start); else start(hot && hot.data);
+  window.__ts = { get G() { return G; } };
+})();
+</script>
+</body>
+</html>

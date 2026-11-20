@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thronestorm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+/* One visual world: a storm-dark table. A single column, opponent at the top,
+   you at the bottom, the realm between; the relics carry all the colour. */
+:root {
+  color-scheme: dark;
+  --ink: #120e17;
+  --stone: #1c1723;
+  --edge: #3b3247;
+  --bone: #ece5d8;
+  --dim: #a297ad;
+  --storm: #b5d0ff;
+  --warn: #ffb58a;
+  --display: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --gap: 6px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: radial-gradient(120% 60% at 50% 0%, #241b2e 0%, var(--ink) 60%) var(--ink);
+  background-attachment: fixed;
+  color: var(--bone);
+  font: 400 17px/1.4 var(--body);
+  min-height: 100%;
+}
+main { max-width: 600px; margin: 0 auto; padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h1 { font: 400 30px/1 var(--display); letter-spacing: .14em; margin: 0; text-wrap: balance; }
+h2 { font: 400 15px/1 var(--display); letter-spacing: .16em; color: var(--dim); margin: 0; }
+button { font: inherit; color: inherit; }
+.btn {
+  background: transparent; border: 1px solid var(--edge); border-radius: 3px;
+  padding: 7px 14px; cursor: pointer; font-weight: 500;
+}
+.btn:hover { border-color: var(--dim); }
+.btn.primary { background: var(--storm); border-color: var(--storm); color: #10131c; font-weight: 700; }
+.btn:disabled { opacity: .4; cursor: default; }
+:focus-visible { outline: 2px solid var(--storm); outline-offset: 2px; }
+
+.zone { display: flex; flex-direction: column; gap: 8px; }
+.zone-head { display: flex; justify-content: space-between; align-items: baseline; }
+.zone-head span { color: var(--dim); font-size: 14px; }
+.slots { display: grid; grid-template-columns: repeat(4, minmax(0, 62px)); gap: 8px; justify-content: center; }
+.slots { align-items: start; }
+.pile { display: grid; gap: 3px; }
+.pile small { color: var(--dim); font-size: 13px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.card, .slot {
+  position: relative; width: 100%; aspect-ratio: 10 / 13; border-radius: 5px; padding: 0;
+  display: grid; place-items: center;
+}
+.slot { border: 1px dashed var(--edge); color: var(--edge); background: transparent; }
+.slot svg { width: 46%; height: 46%; fill: currentColor; opacity: .7; }
+.card {
+  border: 1px solid rgba(0, 0, 0, .55); background: var(--h); color: var(--g);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .13), 0 2px 5px rgba(0, 0, 0, .5);
+  cursor: default;
+}
+.card svg { width: 56%; height: 56%; fill: currentColor; }
+.card .num { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font: 400 11px/1 var(--display); letter-spacing: .04em; opacity: .9; }
+button.card.can, button.slot.can { cursor: pointer; }
+.can { box-shadow: 0 0 0 2px var(--storm), 0 0 12px rgba(181, 208, 255, .55); }
+.slot.can { border-style: solid; border-color: var(--storm); color: var(--storm); }
+.sel { box-shadow: 0 0 0 3px #fff, 0 0 16px #fff; transform: translateY(-3px); }
+.inline { box-shadow: 0 0 0 2px var(--bone); }
+.fresh { animation: fresh 1.6s ease-out; }
+@keyframes fresh { 0% { box-shadow: 0 0 0 3px var(--warn), 0 0 22px var(--warn); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .fresh { animation: none; outline: 2px solid var(--warn); } .sel { transform: none; } }
+
+.realm-wrap { overflow-x: auto; background: var(--stone); border: 1px solid var(--edge); border-radius: 4px; padding: 12px 10px; }
+.realm { position: relative; margin: 0 auto; }
+.realm > * { position: absolute; width: var(--cw); }
+.realm .num { font-size: calc(var(--cw) * .2); }
+
+.h0 { --h: #8d929b; --g: #14161a; } .h1 { --h: #2c4585; --g: #fff; }
+.h2 { --h: #2b8cc2; --g: #fff; }    .h3 { --h: #17907f; --g: #fff; }
+.h4 { --h: #3d7f35; --g: #fff; }    .h5 { --h: #cfa321; --g: #17130a; }
+.h6 { --h: #cc6418; --g: #fff; }    .h7 { --h: #b3222c; --g: #fff; }
+.h8 { --h: #7537a6; --g: #fff; }    .h9 { --h: #ddd6c4; --g: #17130a; }
+
+.prompt { min-height: 2.8em; margin: 0; text-wrap: balance; }
+.prompt.warn { color: var(--warn); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.log { margin: 0; padding: 0; list-style: none; color: var(--dim); font-size: 15px; display: flex; flex-direction: column; gap: 2px; }
+.log li:first-child { color: var(--bone); }
+.chip { display: inline-block; padding: 0 5px; border-radius: 3px; background: var(--h); color: var(--g); font-weight: 500; white-space: nowrap; }
+
+.panel { background: var(--stone); border: 1px solid var(--edge); border-radius: 4px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.panel[hidden] { display: none; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg label { border: 1px solid var(--edge); border-radius: 3px; padding: 6px 12px; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; }
+.seg input:checked + span { color: var(--storm); }
+.seg label:has(input:checked) { border-color: var(--storm); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--storm); outline-offset: 2px; }
+.banner { text-align: center; border-color: var(--storm); }
+.banner strong { font: 400 24px/1.2 var(--display); letter-spacing: .08em; }
+details { color: var(--dim); font-size: 16px; max-width: 65ch; }
+details summary { cursor: pointer; color: var(--bone); font: 400 15px/1 var(--display); letter-spacing: .16em; }
+details p { margin: .6em 0; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="g0" viewBox="0 0 24 24"><path d="M12 1.5 14.2 5v9.5H9.8V5zM6.5 14.5h11v2.2h-11zM10.9 16.7h2.2v3.6h-2.2z"/><circle cx="12" cy="21.4" r="1.5"/></symbol>
+  <symbol id="g1" viewBox="0 0 24 24"><path d="M12 2 20 4.8v6.4c0 5-3.4 8.4-8 10.8-4.6-2.4-8-5.800-8-10.800V4.800z"/></symbol>
+  <symbol id="g2" viewBox="0 0 24 24"><path d="M12 2.500c4.700 0 8.200 3.700 8.200 8.300V21h-5.400v-5.200l1.800-1.700v-2.400H7.400v2.400l1.800 1.700V21H3.800V10.800c0-4.600 3.500-8.300 8.200-8.300z"/></symbol>
+  <symbol id="g3" viewBox="0 0 24 24"><path d="M5.500 2.500h13v4.300c0 3.300-2.300 5.800-5.300 6.400v4.600h3.600V21H7.200v-3.200h3.600v-4.600c-3-.6-5.300-3.100-5.300-6.400z"/></symbol>
+</svg>
+<main>
+  <header>
+    <h1>Thronestorm</h1>
+    <button class="btn" id="new-open" type="button">New game</button>
+  </header>
+
+  <section class="panel" id="new-panel" hidden>
+    <div class="field">
+      <h2>Opponent</h2>
+      <div class="seg" id="strength">
+        <label><input type="radio" name="strength" id="st1" value="1"><span>Squire</span></label>
+        <label><input type="radio" name="strength" id="st2" value="2"><span>Knight</span></label>
+        <label><input type="radio" name="strength" id="st4" value="4" checked><span>Regent</span></label>
+      </div>
+    </div>
+    <div class="field">
+      <h2>First move</h2>
+      <div class="seg" id="first">
+        <label><input type="radio" name="first" id="f0" value="0" checked><span>You</span></label>
+        <label><input type="radio" name="first" id="f1" value="1"><span>Opponent</span></label>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="new-go" type="button">Deal a new game</button>
+      <button class="btn" id="new-cancel" type="button">Keep playing</button>
+    </div>
+  </section>
+
+  <section class="panel banner" id="banner" hidden>
+    <strong id="banner-text"></strong>
+    <div class="actions" style="justify-content:center"><button class="btn primary" id="banner-new" type="button">Play again</button></div>
+  </section>
+
+  <section class="zone">
+    <div class="zone-head"><h2>Opponent</h2><span id="opp-note"></span></div>
+    <div class="slots" id="opp"></div>
+  </section>
+
+  <section class="zone">
+    <div class="zone-head"><h2>Realm</h2><span>your row is the bottom one</span></div>
+    <div class="realm-wrap" id="realm-wrap"><div class="realm" id="realm"></div></div>
+  </section>
+
+  <section class="zone">
+    <div class="zone-head"><h2>Reliquary</h2><span>face-up relics, and how many lie beneath</span></div>
+    <div class="slots" id="reliquary"></div>
+  </section>
+
+  <section class="zone">
+    <div class="zone-head"><h2>Your relics</h2><span>one of each kind</span></div>
+    <div class="slots" id="me"></div>
+  </section>
+
+  <p class="prompt" id="prompt" aria-live="polite"></p>
+  <div class="actions" id="actions"></div>
+  <ul class="log" id="log" aria-label="Recent moves"></ul>
+
+  <details>
+    <summary>How to play</summary>
+    <p>Ten noble houses each have four relics: a sword, a shield, a helmet and a chalice. Hold all four relics of one house at the end of your turn and you win.</p>
+    <p><b>Claim.</b> Take a face-up relic from the reliquary. You may hold only one of each kind, so if you now have two, send either one to the realm. It goes at the left or right end of a row, and a column must be full before the next one starts.</p>
+    <p><b>Plot.</b> If a relic on your row belongs to the same house as one you hold, you may plot with a diagonal rising from it. Pick up its three relics and put three back, in any order, from those and your own. You must still end with one of each kind.</p>
+    <p>Your opponent sits opposite, so their row is the top one. You may also pass.</p>
+  </details>
+</main>
+
+<script>/*ENGINE*/</script>
+<script>
+(function () {
+  'use strict';
+  const NONE = TS.NONE, house = TS.house, ctype = TS.ctype;
+  const KIND = ['sword', 'shield', 'helmet', 'chalice'];
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  const NET = TS.loadNet(Uint8Array.from(atob('WEIGHTS'), (c) => c.charCodeAt(0)));
+  const $ = (id) => document.getElementById(id);
+  const key = (r, x) => r + ',' + x;
+  const nameOf = (c) => `${KIND[ctype(c)]} of House ${ROMAN[house(c)]}`;
+  const chip = (c) => `<span class="chip h${house(c)}">${ROMAN[house(c)]} ${KIND[ctype(c)]}</span>`;
+  const glyph = (t) => `<svg aria-hidden="true"><use href="#g${t}"/></svg>`;
+
+  let G; // { s, depth, mode, pick, plot, log, fresh, note, warn }
+
+  function deal(depth, first) {
+    const s = TS.newState(10, Math.random);
+    s.toMove = first;
+    G = { s, depth, mode: 'idle', pick: null, plot: null, log: [], fresh: {}, note: '', warn: false };
+    $('banner').hidden = true;
+    render();
+    if (first === 1) opponentSoon();
+  }
+
+  // ----- drawing -----
+
+  function cardHtml(c, attrs, cls) {
+    const tag = attrs ? 'button type="button"' : 'div';
+    return `<${tag} class="card h${house(c)} ${cls || ''}" ${attrs || ''} aria-label="${nameOf(c)}">${glyph(ctype(c))}<span class="num">${ROMAN[house(c)]}</span></${tag.split(' ')[0]}>`;
+  }
+  function slotHtml(t, attrs, cls) {
+    const tag = attrs ? 'button type="button"' : 'div';
+    const label = t === null ? 'empty place in the realm' : `no ${KIND[t]}`;
+    return `<${tag} class="slot ${cls || ''}" ${attrs || ''} aria-label="${label}">${t === null ? '' : glyph(t)}</${tag.split(' ')[0]}>`;
+  }
+
+  function triggers() {
+    // x of each relic on my row that I can plot from, with its complete diagonals
+    const out = {};
+    if (G.mode !== 'idle' || G.s.toMove !== 0 || G.s.winner >= 0) return out;
+    const mask = TS.handMask(G.s.hands[0]);
+    for (const line of TS.lines(G.s, 0)) {
+      const c = G.s.cells[TS.cid(line[0][0], line[0][1])];
+      if (mask & (1 << house(c))) (out[line[0][1]] = out[line[0][1]] || []).push(line);
+    }
+    return out;
+  }
+
+  function render() {
+    const s = G.s, myTurn = s.toMove === 0 && s.winner < 0;
+    const hand = G.plot ? G.plot.hand : s.hands[0];
+
+    $('opp').innerHTML = [0, 1, 2, 3].map((t) => {
+      const c = s.hands[1][t];
+      return c === NONE ? slotHtml(t) : cardHtml(c, null, G.fresh['o' + t] ? 'fresh' : '');
+    }).join('');
+
+    $('me').innerHTML = [0, 1, 2, 3].map((t) => {
+      const c = hand[t];
+      let cls = G.fresh['m' + t] ? 'fresh' : '', live = false;
+      if (G.mode === 'plot') { live = true; if (G.pick && G.pick.k === 'hand' && G.pick.t === t) cls += ' sel'; }
+      if (G.mode === 'claim-choose' && G.pick.t === t) { live = true; cls += ' can'; }
+      const attrs = live ? `data-act="hand" data-t="${t}"` : null;
+      return c === NONE ? slotHtml(t, attrs, cls) : cardHtml(c, attrs, cls);
+    }).join('');
+
+    $('reliquary').innerHTML = [0, 1, 2, 3].map((t) => {
+      const c = TS.faceUp(s, t), left = Math.max(0, s.dlen[t] - 1);
+      let inner;
+      if (c === NONE) inner = slotHtml(t);
+      else {
+        let cls = G.fresh['d' + t] ? 'fresh' : '', attrs = null;
+        if (myTurn && G.mode === 'idle') { attrs = `data-act="claim" data-t="${t}"`; cls += ' can'; }
+        if (G.mode === 'claim-choose' && G.pick.t === t) { attrs = `data-act="claim" data-t="${t}"`; cls += ' can'; }
+        if (G.mode === 'claim-place' && G.pick.t === t && G.pick.played === c) cls += ' sel';
+        inner = cardHtml(c, attrs, cls);
+      }
+      return `<div class="pile">${inner}<small>${c === NONE ? 'empty' : left + ' more'}</small></div>`;
+    }).join('');
+
+    renderRealm();
+
+    // prompt, buttons, log
+    let text = G.note, buttons = '';
+    if (s.winner >= 0) text = '';
+    else if (!myTurn) text = text || 'The opponent is thinking.';
+    else if (G.mode === 'idle') {
+      text = text || 'Your turn. Claim a relic from the reliquary, or tap a glowing relic on your row to plot.';
+      buttons = '<button class="btn" type="button" data-act="pass">Pass</button>';
+    } else if (G.mode === 'claim-choose') {
+      text = text || `You already hold a ${KIND[G.pick.t]}. Tap the one to send to the realm.`;
+      buttons = '<button class="btn" type="button" data-act="cancel">Cancel</button>';
+    } else if (G.mode === 'claim-place') {
+      text = text || 'Tap a glowing place in the realm.';
+      buttons = '<button class="btn" type="button" data-act="cancel">Cancel</button>';
+    } else if (G.mode === 'plot-pick') {
+      text = text || 'Two diagonals rise from that relic. Tap another relic on the one you want.';
+      buttons = '<button class="btn" type="button" data-act="cancel">Cancel</button>';
+    } else if (G.mode === 'plot') {
+      text = text || 'Tap two relics to swap them: within the diagonal, or between the diagonal and your own.';
+      const ready = G.plot.cells.every((c) => c !== NONE) && G.plot.cells.some((c, i) => c !== G.plot.orig[i]);
+      buttons = `<button class="btn primary" type="button" data-act="confirm" ${ready ? '' : 'disabled'}>Confirm plot</button>
+                 <button class="btn" type="button" data-act="cancel">Cancel</button>`;
+    }
+    $('prompt').textContent = text;
+    $('prompt').className = 'prompt' + (G.warn ? ' warn' : '');
+    $('actions').innerHTML = buttons;
+    $('log').innerHTML = G.log.slice(0, 5).map((l) => `<li>${l}</li>`).join('');
+    $('opp-note').textContent = ['', 'Squire', 'Knight', '', 'Regent'][G.depth] || '';
+    G.note = ''; G.warn = false;
+  }
+
+  function renderRealm() {
+    const s = G.s, trig = triggers();
+    const open = TS.openSlots(s);
+    let lo = s.lo, hi = s.hi;
+    for (const [, x] of open) { lo = Math.min(lo, x); hi = Math.max(hi, x); }
+    const wrap = $('realm-wrap'), el = $('realm');
+    const avail = Math.max(240, wrap.clientWidth - 22);
+    const cols = (hi - lo) / 2 + 1, gap = 6;
+    const cw = Math.max(34, Math.min(62, Math.floor(avail / cols) - gap));
+    const ch = Math.round(cw * 1.3);
+    el.style.setProperty('--cw', cw + 'px');
+    el.style.width = Math.ceil(cols * (cw + gap) - gap) + 'px';
+    el.style.height = 3 * ch + 2 * gap + 'px';
+    const pos = (r, x) => `style="left:${((x - lo) / 2) * (cw + gap)}px;top:${r * (ch + gap)}px"`;
+    const inLine = {};
+    if (G.plot) G.plot.line.forEach(([r, x], i) => { inLine[key(r, x)] = i; });
+    const pickable = {};
+    if (G.mode === 'plot-pick') G.pick.lines.forEach((line, li) => { for (const [r, x] of line.slice(1)) pickable[key(r, x)] = li; });
+    let html = '';
+    for (let x = lo; x <= hi; x++) for (let r = 0; r < 3; r++) {
+      let c = s.cells[TS.cid(r, x)];
+      const k = key(r, x);
+      if (k in inLine) c = G.plot.cells[inLine[k]];
+      if (c === NONE && !(k in inLine)) continue;
+      let cls = G.fresh[k] ? 'fresh' : '', attrs = null;
+      if (k in inLine) {
+        attrs = `data-act="cell" data-i="${inLine[k]}"`;
+        cls += G.pick && G.pick.k === 'cell' && G.pick.i === inLine[k] ? ' sel' : ' inline';
+      } else if (G.mode === 'idle' && r === 2 && trig[x]) { attrs = `data-act="trigger" data-x="${x}"`; cls += ' can'; }
+      else if (k in pickable) { attrs = `data-act="line" data-li="${pickable[k]}"`; cls += ' can'; }
+      else if (G.mode === 'plot-pick' && r === 2 && x === G.pick.x) cls += ' sel';
+      html += c === NONE ? slotHtml(null, attrs + ' ' + pos(r, x), cls) : cardHtml(c, attrs ? attrs + ' ' + pos(r, x) : null, cls).replace('<div class', `<div ${pos(r, x)} class`);
+    }
+    if (G.mode === 'claim-place') {
+      for (const [r, x] of open) html += slotHtml(null, `data-act="place" data-r="${r}" data-x="${x}" ${pos(r, x)}`, 'can');
+    }
+    el.innerHTML = html;
+  }
+
+  // ----- playing moves -----
+
+  function describe(who, before, m, after) {
+    const p = before.toMove, You = who === 0;
+    if (m[0] === 'pass') return You ? 'You pass.' : 'The opponent passes.';
+    if (m[0] === 'claim') {
+      const c = TS.faceUp(before, m[1]);
+      if (m[2] === null) return `${You ? 'You claim' : 'The opponent claims'} the ${chip(c)}.`;
+      if (m[2] === c) return `${You ? 'You send' : 'The opponent sends'} the ${chip(c)} straight to the realm.`;
+      return `${You ? 'You claim' : 'The opponent claims'} the ${chip(c)} and ${You ? 'send' : 'sends'} the ${chip(m[2])} to the realm.`;
+    }
+    const had = Array.from(before.hands[p]).filter((c) => c !== NONE);
+    const took = Array.from(after.hands[p]).filter((c) => c !== NONE && !had.includes(c));
+    const left = had.filter((c) => !Array.from(after.hands[p]).includes(c));
+    if (!took.length) return `${You ? 'You rearrange' : 'The opponent rearranges'} a diagonal.`;
+    return `${You ? 'You plot: take' : 'The opponent plots: takes'} ${took.map(chip).join(' ')}, ${You ? 'leave' : 'leaves'} ${left.map(chip).join(' ')}.`;
+  }
+
+  function play(m) {
+    const before = G.s, who = before.toMove;
+    const succ = TS.successors(before);
+    const hit = succ.find((t) => JSON.stringify(t.m) === JSON.stringify(m));
+    if (!hit) { G.note = 'That move is not allowed.'; G.warn = true; render(); return false; }
+    commit(before, hit, who);
+    return true;
+  }
+
+  function commit(before, hit, who) {
+    const after = hit.s;
+    TS.flip(after);
+    const fresh = {};
+    for (let x = after.lo; x <= after.hi; x++) for (let r = 0; r < 3; r++) {
+      if (after.cells[TS.cid(r, x)] !== before.cells[TS.cid(r, x)]) fresh[key(r, x)] = 1;
+    }
+    for (let t = 0; t < 4; t++) {
+      if (after.hands[0][t] !== before.hands[0][t]) fresh['m' + t] = 1;
+      if (after.hands[1][t] !== before.hands[1][t]) fresh['o' + t] = 1;
+      if (TS.faceUp(after, t) !== TS.faceUp(before, t)) fresh['d' + t] = 1;
+    }
+    G.log.unshift(describe(who, before, hit.m, after));
+    G.s = after; G.fresh = fresh; G.mode = 'idle'; G.pick = null; G.plot = null;
+    if (after.winner >= 0) {
+      const h = ROMAN[house(after.hands[after.winner][0])];
+      $('banner-text').textContent = after.winner === 0 ? `You have united House ${h}.` : `The opponent has united House ${h}.`;
+      $('banner').hidden = false;
+    }
+    render();
+    if (after.winner < 0 && after.toMove === 1) opponentSoon();
+  }
+
+  function opponentSoon() {
+    setTimeout(() => {
+      const s = G.s;
+      if (s.winner >= 0 || s.toMove !== 1) return;
+      const succ = TS.successors(s);
+      const i = TS.choose(s, succ, { net: NET, depth: G.depth, rivalry: 0 });
+      commit(s, succ[i], 1);
+    }, 500);
+  }
+
+  function startPlot(line) {
+    G.mode = 'plot'; G.pick = null;
+    const cells = line.map(([r, x]) => G.s.cells[TS.cid(r, x)]);
+    G.plot = { line, cells, orig: cells.slice(), hand: Array.from(G.s.hands[0]) };
+  }
+
+  // Move the relic on diagonal place i into my hand and relic b (or nothing) onto the diagonal.
+  function exchange(i, b) {
+    const P = G.plot, a = P.cells[i], nh = P.hand.slice();
+    if (b !== NONE) nh[ctype(b)] = NONE;
+    if (a !== NONE) {
+      if (nh[ctype(a)] !== NONE) {
+        G.note = `You would hold two ${KIND[ctype(a)]}s. Swap it with your own ${KIND[ctype(a)]}, or put that one down first.`;
+        G.warn = true;
+        return;
+      }
+      nh[ctype(a)] = a;
+    }
+    P.cells[i] = b; P.hand = nh;
+  }
+
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const act = el.dataset.act, s = G.s;
+    if (s.winner >= 0 || s.toMove !== 0) return;
+    if (act === 'pass') return void play(['pass']);
+    if (act === 'cancel') { G.mode = 'idle'; G.pick = null; G.plot = null; return render(); }
+    if (act === 'claim') {
+      const t = +el.dataset.t, c = TS.faceUp(s, t);
+      if (G.mode === 'idle') {
+        if (s.hands[0][t] === NONE) return void play(['claim', t, null, null]);
+        G.mode = 'claim-choose'; G.pick = { t };
+      } else if (G.mode === 'claim-choose') { G.mode = 'claim-place'; G.pick = { t, played: c }; }
+      return render();
+    }
+    if (act === 'hand') {
+      const t = +el.dataset.t;
+      if (G.mode === 'claim-choose') { G.mode = 'claim-place'; G.pick = { t, played: s.hands[0][t] }; return render(); }
+      if (G.mode === 'plot') {
+        const P = G.plot;
+        if (G.pick && G.pick.k === 'cell') { exchange(G.pick.i, P.hand[t]); G.pick = null; }
+        else if (G.pick && G.pick.k === 'hand' && G.pick.t === t) G.pick = null;
+        else if (P.hand[t] !== NONE) G.pick = { k: 'hand', t };
+        return render();
+      }
+    }
+    if (act === 'place') return void play(['claim', G.pick.t, G.pick.played, [+el.dataset.r, +el.dataset.x]]);
+    if (act === 'trigger') {
+      const x = +el.dataset.x, lines = triggers()[x];
+      if (lines.length === 1) startPlot(lines[0]);
+      else { G.mode = 'plot-pick'; G.pick = { x, lines }; }
+      return render();
+    }
+    if (act === 'line') { startPlot(G.pick.lines[+el.dataset.li]); return render(); }
+    if (act === 'cell') {
+      const i = +el.dataset.i, P = G.plot;
+      if (!G.pick) { if (P.cells[i] !== NONE) G.pick = { k: 'cell', i }; }
+      else if (G.pick.k === 'cell') {
+        if (G.pick.i !== i) [P.cells[i], P.cells[G.pick.i]] = [P.cells[G.pick.i], P.cells[i]];
+        G.pick = null;
+      } else { exchange(i, P.hand[G.pick.t]); G.pick = null; }
+      return render();
+    }
+    if (act === 'confirm') return void play(['plot', G.plot.line, G.plot.cells.slice()]);
+  });
+
+  const openNew = () => { $('new-panel').hidden = false; $('new-go').focus(); };
+  $('new-open').addEventListener('click', openNew);
+  $('banner-new').addEventListener('click', openNew);
+  $('new-cancel').addEventListener('click', () => { $('new-panel').hidden = true; });
+  $('new-go').addEventListener('click', () => {
+    $('new-panel').hidden = true;
+    deal(+document.querySelector('input[name=strength]:checked').value, +document.querySelector('input[name=first]:checked').value);
+  });
+  window.addEventListener('resize', () => { if (G) renderRealm(); });
+
+  // Keep the game across a republish of this page.
+  const pack = () => ({
+    v: 1, depth: G.depth, log: G.log.slice(0, 5),
+    s: { ...G.s, cells: Array.from(G.s.cells), hands: G.s.hands.map((h) => Array.from(h)) },
+  });
+  function start(saved) {
+    if (saved && saved.v === 1 && saved.s) {
+      const s = saved.s;
+      G = {
+        s: { ...s, cells: Uint8Array.from(s.cells), hands: s.hands.map((h) => Uint8Array.from(h)) },
+        depth: saved.depth, mode: 'idle', pick: null, plot: null, log: saved.log || [], fresh: {}, note: '', warn: false,
+      };
+      render();
+      if (G.s.winner < 0 && G.s.toMove === 1) opponentSoon();
+    } else deal(4, 0);
+  }
+  const hot = window.claude && window.claude.hot;
+  if (hot && hot.snapshot) hot.snapshot(pack);
+  if (hot && hot.ready) hot.ready(start); else start(hot && hot.data);
+  window.__ts = { get G() { return G; } };
+})();
+</script>
+</body>
+</html>
