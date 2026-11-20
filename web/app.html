@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <style>
 /* One visual world: a storm-dark table. A single column, opponent at the top,
-   you at the bottom, the realm between; the relics carry all the colour. */
+   you at the bottom, the reliquary and realm between; the relics carry the colour. */
 :root {
   color-scheme: dark;
   --ink: #120e17;
@@ -21,24 +21,29 @@
   --warn: #ffb58a;
   --display: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
   --body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
-  --gap: 6px;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body {
-  background: radial-gradient(120% 60% at 50% 0%, #241b2e 0%, var(--ink) 60%) var(--ink);
+  background:
+    var(--grain),
+    radial-gradient(90% 38% at 70% -6%, rgba(150, 170, 230, .20), transparent 70%),
+    radial-gradient(120% 70% at 50% 0%, #2a1f36 0%, var(--ink) 62%) var(--ink);
+  background-blend-mode: soft-light, normal, normal;
   background-attachment: fixed;
   color: var(--bone);
   font: 400 17px/1.4 var(--body);
   min-height: 100%;
+  -webkit-user-select: none; user-select: none;
 }
 main { max-width: 600px; margin: 0 auto; padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
 header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-h1 { font: 400 30px/1 var(--display); letter-spacing: .14em; margin: 0; text-wrap: balance; }
+h1 { font: 400 30px/1 var(--display); letter-spacing: .14em; margin: 0; text-wrap: balance; text-shadow: 0 0 18px rgba(181, 208, 255, .35); }
 h2 { font: 400 15px/1 var(--display); letter-spacing: .16em; color: var(--dim); margin: 0; }
 button { font: inherit; color: inherit; }
 .btn {
-  background: transparent; border: 1px solid var(--edge); border-radius: 3px;
+  background: rgba(255, 255, 255, .03); border: 1px solid var(--edge); border-radius: 3px;
   padding: 7px 14px; cursor: pointer; font-weight: 500;
 }
 .btn:hover { border-color: var(--dim); }
@@ -49,47 +54,74 @@ button { font: inherit; color: inherit; }
 .zone { display: flex; flex-direction: column; gap: 8px; }
 .zone-head { display: flex; justify-content: space-between; align-items: baseline; }
 .zone-head span { color: var(--dim); font-size: 14px; }
-.slots { display: grid; grid-template-columns: repeat(4, minmax(0, 62px)); gap: 8px; justify-content: center; }
-.slots { align-items: start; }
-/* reliquary: a column of four piles to the left of the realm */
-.table { display: flex; gap: 10px; align-items: center; }
-.table .realm-wrap { flex: 1; min-width: 0; }
-.rel { display: grid; gap: 7px; width: 46px; flex: none; }
-.rel .num { font-size: 10px; }
-.pile { position: relative; }
-.pile small {
-  position: absolute; top: -6px; right: -6px; min-width: 19px; height: 19px; padding: 0 4px;
-  border-radius: 10px; background: var(--ink); border: 1px solid var(--dim); color: var(--bone);
-  font-size: 12px; line-height: 17px; text-align: center; font-variant-numeric: tabular-nums;
-}
+.slots { display: grid; grid-template-columns: repeat(4, minmax(0, 62px)); gap: 8px; justify-content: center; align-items: start; }
+#me { min-height: 96px; padding: 6px 0; border-radius: 6px; }
+/* relics of one kind held together, fanned downwards so each stays readable */
+.stack { display: grid; }
+.stack > * + * { margin-top: -88%; }
 
 .card, .slot {
   position: relative; width: 100%; aspect-ratio: 10 / 13; border-radius: 5px; padding: 0;
   display: grid; place-items: center;
 }
-.slot { border: 1px dashed var(--edge); color: var(--edge); background: transparent; }
+.slot { border: 1px dashed var(--edge); color: var(--edge); background: rgba(0, 0, 0, .18); }
 .slot svg { width: 46%; height: 46%; fill: currentColor; opacity: .7; }
+.slot.faint { opacity: .45; }
 .card {
-  border: 1px solid rgba(0, 0, 0, .55); background: var(--h); color: var(--g);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .13), 0 2px 5px rgba(0, 0, 0, .5);
+  border: 1px solid rgba(0, 0, 0, .6); color: var(--g);
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, .30) 0%, rgba(255, 255, 255, 0) 38%, rgba(0, 0, 0, .28) 100%),
+    var(--h);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .55);
   cursor: default;
 }
-.card svg { width: 56%; height: 56%; fill: currentColor; }
-.card .num { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font: 400 11px/1 var(--display); letter-spacing: .04em; opacity: .9; }
-button.card.can, button.slot.can { cursor: pointer; }
+.card::before {
+  content: ""; position: absolute; inset: 3px; border-radius: 3px; pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--g) 45%, transparent);
+}
+.card svg { width: 54%; height: 54%; fill: currentColor; margin-top: 12%; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .35)); }
+.card .num { position: absolute; left: 0; right: 0; top: 5px; text-align: center; font: 400 11px/1 var(--display); letter-spacing: .04em; }
+.card.back {
+  --h: #2a2233; --g: #6f6480;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .05) 0 4px, transparent 4px 8px),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, .05) 0 4px, transparent 4px 8px), var(--h);
+}
+[data-src] { touch-action: none; cursor: grab; }
+button.card, button.slot, [data-dst] { cursor: pointer; }
 .can { box-shadow: 0 0 0 2px var(--storm), 0 0 12px rgba(181, 208, 255, .55); }
-.slot.can { border-style: solid; border-color: var(--storm); color: var(--storm); }
-.sel { box-shadow: 0 0 0 3px #fff, 0 0 16px #fff; transform: translateY(-3px); }
+.slot.can { border-style: solid; border-color: var(--storm); color: var(--storm); opacity: 1; }
+.sel { box-shadow: 0 0 0 3px #fff, 0 0 16px #fff; }
 .inline { box-shadow: 0 0 0 2px var(--bone); }
+.over { box-shadow: 0 0 0 3px var(--warn), 0 0 16px var(--warn) !important; }
+body.dragging .slot.faint { opacity: 1; border-color: var(--storm); border-style: solid; }
+body.dragging #me { box-shadow: inset 0 0 0 1px var(--edge); }
 .fresh { animation: fresh 1.6s ease-out; }
 @keyframes fresh { 0% { box-shadow: 0 0 0 3px var(--warn), 0 0 22px var(--warn); } 100% { box-shadow: 0 0 0 0 transparent; } }
-@media (prefers-reduced-motion: reduce) { .fresh { animation: none; outline: 2px solid var(--warn); } .sel { transform: none; } }
+.ghost { box-shadow: 0 8px 18px rgba(0, 0, 0, .65); }
+.flash::after { content: ""; position: fixed; inset: 0; background: #dfe9ff; pointer-events: none; animation: flash .9s ease-out forwards; }
+@keyframes flash { 0% { opacity: 0; } 8% { opacity: .75; } 16% { opacity: .1; } 26% { opacity: .55; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .fresh { animation: none; outline: 2px solid var(--warn); } .flash::after { animation: none; opacity: 0; } }
 
-.realm-wrap { overflow-x: auto; background: var(--stone); border: 1px solid var(--edge); border-radius: 4px; padding: 12px 10px; }
+/* reliquary: a column of four piles to the left of the realm; the relics
+   beneath each face-up one show as card edges running out to the left */
+.table { display: flex; gap: 10px; align-items: center; }
+.rel { display: grid; gap: 7px; width: 64px; flex: none; padding-left: 20px; }
+.rel .num { font-size: 10px; }
+.pile { position: relative; }
+.pile::before {
+  content: ""; position: absolute; top: 2px; bottom: 2px; right: calc(100% - 1px); width: calc(var(--k) * 2px);
+  background: repeating-linear-gradient(to left, #8a7f97 0 1px, #1b1622 1px 2px); border-radius: 3px 0 0 3px;
+}
+.realm-wrap {
+  flex: 1; min-width: 0; overflow-x: auto; border: 1px solid var(--edge); border-radius: 4px; padding: 12px 10px;
+  background: var(--grain), radial-gradient(120% 90% at 50% 50%, #2a2236 0%, #17121d 100%);
+  background-blend-mode: soft-light, normal;
+  box-shadow: inset 0 0 26px rgba(0, 0, 0, .7);
+}
 .realm { position: relative; margin: 0 auto; }
 .realm > * { position: absolute; width: var(--cw); }
-.realm .num { font-size: calc(var(--cw) * .2); }
-.ghost { box-shadow: 0 6px 14px rgba(0, 0, 0, .6); }
+.realm .num { font-size: calc(var(--cw) * .2); top: calc(var(--cw) * .09); }
 
 .h0 { --h: #8d929b; --g: #14161a; } .h1 { --h: #2c4585; --g: #fff; }
 .h2 { --h: #2b8cc2; --g: #fff; }    .h3 { --h: #17907f; --g: #fff; }
@@ -100,7 +132,7 @@ button.card.can, button.slot.can { cursor: pointer; }
 .prompt { min-height: 2.8em; margin: 0; text-wrap: balance; }
 .prompt.warn { color: var(--warn); }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.log { margin: 0; padding: 0; list-style: none; color: var(--dim); font-size: 15px; display: flex; flex-direction: column; gap: 2px; }
+.log { margin: 0; padding: 0; list-style: none; color: var(--dim); font-size: 15px; display: flex; flex-direction: column; gap: 2px; -webkit-user-select: text; user-select: text; }
 .log li:first-child { color: var(--bone); }
 .chip { display: inline-block; padding: 0 5px; border-radius: 3px; background: var(--h); color: var(--g); font-weight: 500; white-space: nowrap; }
 
@@ -115,7 +147,7 @@ button.card.can, button.slot.can { cursor: pointer; }
 .seg label:has(input:focus-visible) { outline: 2px solid var(--storm); outline-offset: 2px; }
 .banner { text-align: center; border-color: var(--storm); }
 .banner strong { font: 400 24px/1.2 var(--display); letter-spacing: .08em; }
-details { color: var(--dim); font-size: 16px; max-width: 65ch; }
+details { color: var(--dim); font-size: 16px; max-width: 65ch; -webkit-user-select: text; user-select: text; }
 details summary { cursor: pointer; color: var(--bone); font: 400 15px/1 var(--display); letter-spacing: .16em; }
 details p { margin: .6em 0; }
 </style>
@@ -175,7 +207,7 @@ details p { margin: .6em 0; }
 
   <section class="zone">
     <div class="zone-head"><h2>Your relics</h2><span>one of each kind</span></div>
-    <div class="slots" id="me"></div>
+    <div class="slots" id="me" data-dst="hand"></div>
   </section>
 
   <p class="prompt" id="prompt" aria-live="polite"></p>
@@ -185,8 +217,8 @@ details p { margin: .6em 0; }
   <details>
     <summary>How to play</summary>
     <p>Ten noble houses each have four relics: a sword, a shield, a helmet and a chalice. Hold all four relics of one house at the end of your turn and you win.</p>
-    <p><b>Claim.</b> Take a face-up relic from the reliquary, the column on the left. The number on each pile is how many relics lie beneath it. You may hold only one of each kind, so if you now have two, send either one to the realm. It goes at the left or right end of a row, and a column must be full before the next one starts.</p>
-    <p><b>Plot.</b> If a relic on your row belongs to the same house as one you hold, you may plot with a diagonal rising from it. Pick up its three relics and put three back, in any order, from those and your own. You must still end with one of each kind.</p>
+    <p><b>Claim.</b> Drag a face-up relic from the reliquary, the column on the left, to your relics (or just tap it). The card edges beside each pile are the relics still beneath it. You may keep only one of each kind, so if you now hold two, drag either one to a glowing place in the realm. A relic goes at the left or right end of a row, and a column must be full before the next one starts.</p>
+    <p><b>Plot.</b> If a relic on your row belongs to the same house as one you hold, tap it to plot with a diagonal rising from it. Its three relics come up into your hand. Put three back, in any order, from everything you now hold. You must still end with one of each kind.</p>
     <p>Your opponent sits opposite, so their row is the top one. You may also pass.</p>
   </details>
 </main>
@@ -205,12 +237,18 @@ details p { margin: .6em 0; }
   const chip = (c) => `<span class="chip h${house(c)}">${ROMAN[house(c)]} ${KIND[ctype(c)]}</span>`;
   const glyph = (t) => `<svg aria-hidden="true"><use href="#g${t}"/></svg>`;
 
-  let G; // { s, depth, mode, pick, plot, log, fresh, note, warn }
+  // G.mode: idle | claim (holding two of a kind, one must go to the realm) |
+  //         plot-pick (choosing between two diagonals) | plot (diagonal picked up)
+  let G;
+  const fresh = () => ({ mode: 'idle', pick: null, claim: null, plot: null, lines: null, fresh: {}, note: '', warn: false, flyFrom: null });
+  const myTurn = () => G.s.toMove === 0 && G.s.winner < 0;
+  const say = (text) => { G.note = text; G.warn = true; };
+  const reset = () => { G.mode = 'idle'; G.pick = null; G.claim = null; G.plot = null; G.lines = null; };
 
   function deal(depth, first) {
     const s = TS.newState(10, Math.random);
     s.toMove = first;
-    G = { s, depth, mode: 'idle', pick: null, plot: null, log: [], fresh: {}, note: '', warn: false };
+    G = Object.assign({ s, depth, log: [] }, fresh());
     $('banner').hidden = true;
     render();
     if (first === 1) opponentSoon();
@@ -219,25 +257,140 @@ details p { margin: .6em 0; }
   // ----- drawing -----
 
   function cardHtml(c, attrs, cls) {
-    const tag = attrs ? 'button type="button"' : 'div';
-    return `<${tag} class="card h${house(c)} ${cls || ''}" data-card="${c}" ${attrs || ''} aria-label="${nameOf(c)}">${glyph(ctype(c))}<span class="num">${ROMAN[house(c)]}</span></${tag.split(' ')[0]}>`;
+    const tag = attrs ? 'button' : 'div';
+    return `<${tag}${attrs ? ' type="button"' : ''} class="card h${house(c)} ${cls || ''}" data-card="${c}" ${attrs || ''} aria-label="${nameOf(c)}">${glyph(ctype(c))}<span class="num">${ROMAN[house(c)]}</span></${tag}>`;
   }
   function slotHtml(t, attrs, cls) {
-    const tag = attrs ? 'button type="button"' : 'div';
+    const tag = attrs && attrs.includes('data-') && !attrs.startsWith('style') ? 'button' : 'div';
     const label = t === null ? 'empty place in the realm' : `no ${KIND[t]}`;
-    return `<${tag} class="slot ${cls || ''}" ${attrs || ''} aria-label="${label}">${t === null ? '' : glyph(t)}</${tag.split(' ')[0]}>`;
+    return `<${tag}${tag === 'button' ? ' type="button"' : ''} class="slot ${cls || ''}" ${attrs || ''} aria-label="${label}">${t === null ? '' : glyph(t)}</${tag}>`;
   }
 
   function triggers() {
     // x of each relic on my row that I can plot from, with its complete diagonals
     const out = {};
-    if (G.mode !== 'idle' || G.s.toMove !== 0 || G.s.winner >= 0) return out;
+    if (G.mode !== 'idle' || !myTurn()) return out;
     const mask = TS.handMask(G.s.hands[0]);
     for (const line of TS.lines(G.s, 0)) {
       const c = G.s.cells[TS.cid(line[0][0], line[0][1])];
       if (mask & (1 << house(c))) (out[line[0][1]] = out[line[0][1]] || []).push(line);
     }
     return out;
+  }
+
+  // The relics I am holding right now, grouped by kind.
+  function stacks() {
+    const out = [[], [], [], []];
+    if (G.mode === 'plot') for (const c of G.plot.pool) out[ctype(c)].push(c);
+    else {
+      for (let t = 0; t < 4; t++) if (G.s.hands[0][t] !== NONE) out[t].push(G.s.hands[0][t]);
+      if (G.mode === 'claim') out[G.claim.t].push(G.claim.c);
+    }
+    return out;
+  }
+  const picked = (k, v) => G.pick && G.pick.k === k && (k === 'hand' ? G.pick.card === v : G.pick.i === v);
+
+  function draw() {
+    const s = G.s;
+    $('opp').innerHTML = [0, 1, 2, 3].map((t) => {
+      const c = s.hands[1][t];
+      return c === NONE ? slotHtml(t) : cardHtml(c, null, G.fresh['o' + t] ? 'fresh' : '');
+    }).join('');
+
+    $('me').innerHTML = stacks().map((cards, t) => {
+      if (!cards.length) return `<div class="stack">${slotHtml(t)}</div>`;
+      return '<div class="stack">' + cards.map((c) => {
+        let cls = G.fresh['m' + t] ? 'fresh' : '', attrs = null;
+        if (G.mode === 'plot' || (G.mode === 'claim' && G.claim.t === t)) {
+          attrs = 'data-src="hand"';
+          cls += picked('hand', c) ? ' sel' : G.mode === 'claim' ? ' can' : '';
+        }
+        return cardHtml(c, attrs, cls);
+      }).join('') + '</div>';
+    }).join('');
+
+    $('reliquary').innerHTML = [0, 1, 2, 3].map((t) => {
+      const lifted = G.mode === 'claim' && G.claim.t === t; // its face-up relic is in my hand for now
+      const c = lifted ? NONE : TS.faceUp(s, t);
+      const beneath = Math.max(0, s.dlen[t] - 1 - (lifted ? 1 : 0));
+      let inner;
+      if (lifted && s.dlen[t] > 1) inner = '<div class="card back" aria-label="face-down relic"></div>';
+      else if (c === NONE) inner = slotHtml(t);
+      else {
+        const live = myTurn() && G.mode === 'idle';
+        inner = cardHtml(c, live ? `data-src="deck" data-t="${t}"` : null, (G.fresh['d' + t] ? 'fresh' : '') + (live ? ' can' : ''));
+      }
+      return `<div class="pile" style="--k:${beneath}" aria-label="${KIND[t]} pile, ${beneath} beneath">${inner}</div>`;
+    }).join('');
+
+    drawRealm();
+
+    let text = G.note, buttons = '';
+    const cancel = '<button class="btn" type="button" data-act="cancel">Cancel</button>';
+    if (s.winner >= 0) text = '';
+    else if (!myTurn()) text = text || 'The opponent is thinking.';
+    else if (G.mode === 'idle') {
+      text = text || 'Your turn. Drag a relic from the reliquary to your relics, or tap a glowing relic on your row to plot.';
+      buttons = '<button class="btn" type="button" data-act="pass">Pass</button>';
+    } else if (G.mode === 'claim') {
+      text = text || `You now hold two ${KIND[G.claim.t]}s. Drag one of them to a glowing place in the realm.`;
+      buttons = cancel;
+    } else if (G.mode === 'plot-pick') {
+      text = text || 'Two diagonals rise from that relic. Tap another relic on the one you want.';
+      buttons = cancel;
+    } else if (G.mode === 'plot') {
+      const left = G.plot.placed.filter((c) => c === NONE).length;
+      text = text || (left ? `You have picked up the diagonal. Put ${left === 3 ? 'three relics' : left === 2 ? 'two more relics' : 'one more relic'} back, keeping one of each kind.`
+        : 'Confirm the plot, or keep rearranging.');
+      buttons = `<button class="btn primary" type="button" data-act="confirm" ${left ? 'disabled' : ''}>Confirm plot</button>${cancel}`;
+    }
+    $('prompt').textContent = text;
+    $('prompt').className = 'prompt' + (G.warn ? ' warn' : '');
+    $('actions').innerHTML = buttons;
+    $('log').innerHTML = G.log.slice(0, 5).map((l) => `<li>${l}</li>`).join('');
+    $('opp-note').textContent = ['', 'Squire', 'Knight', '', 'Regent'][G.depth] || '';
+    G.note = ''; G.warn = false;
+  }
+
+  function drawRealm() {
+    const s = G.s, trig = triggers();
+    const open = TS.openSlots(s);
+    let lo = s.lo, hi = s.hi;
+    for (const [, x] of open) { lo = Math.min(lo, x); hi = Math.max(hi, x); }
+    const wrap = $('realm-wrap'), el = $('realm');
+    const avail = Math.max(200, wrap.clientWidth - 22);
+    const cols = (hi - lo) / 2 + 1, gap = 6;
+    const cw = Math.max(34, Math.min(62, Math.floor(avail / cols) - gap));
+    const ch = Math.round(cw * 1.3);
+    el.style.setProperty('--cw', cw + 'px');
+    el.style.width = Math.ceil(cols * (cw + gap) - gap) + 'px';
+    el.style.height = 3 * ch + 2 * gap + 'px';
+    const pos = (r, x) => `style="left:${((x - lo) / 2) * (cw + gap)}px;top:${r * (ch + gap)}px"`;
+    const place = {};
+    if (G.plot) G.plot.line.forEach(([r, x], i) => { place[key(r, x)] = i; });
+    const choice = {};
+    if (G.mode === 'plot-pick') G.lines.lines.forEach((line, li) => { for (const [r, x] of line.slice(1)) choice[key(r, x)] = li; });
+    let html = '';
+    for (let x = lo; x <= hi; x++) for (let r = 0; r < 3; r++) {
+      const k = key(r, x);
+      if (k in place) {
+        const i = place[k], c = G.plot.placed[i];
+        html += c === NONE ? slotHtml(null, `data-dst="place" data-i="${i}" ${pos(r, x)}`, 'can')
+          : cardHtml(c, `data-src="place" data-dst="place" data-i="${i}" ${pos(r, x)}`, picked('place', i) ? 'sel' : 'inline');
+        continue;
+      }
+      const c = s.cells[TS.cid(r, x)];
+      if (c === NONE) continue;
+      let cls = G.fresh[k] ? 'fresh' : '', attrs = '';
+      if (G.mode === 'idle' && r === 2 && trig[x]) { attrs = `data-act="trigger" data-x="${x}" `; cls += ' can'; }
+      else if (k in choice) { attrs = `data-act="line" data-li="${choice[k]}" `; cls += ' can'; }
+      else if (G.mode === 'plot-pick' && r === 2 && x === G.lines.x) cls += ' sel';
+      html += attrs ? cardHtml(c, attrs + pos(r, x), cls) : cardHtml(c, null, cls).replace('<div class', `<div ${pos(r, x)} class`);
+    }
+    if (myTurn() && (G.mode === 'idle' || G.mode === 'claim')) {
+      for (const [r, x] of open) html += slotHtml(null, `data-dst="cell" data-r="${r}" data-x="${x}" ${pos(r, x)}`, G.mode === 'claim' ? 'can' : 'faint');
+    }
+    el.innerHTML = html;
   }
 
   // ----- sliding relics -----
@@ -256,7 +409,6 @@ details p { margin: .6em 0; }
     document.querySelectorAll('[data-card]').forEach((el) => {
       const from = old[el.dataset.card], to = el.getBoundingClientRect();
       if (!from) {
-        // newly turned up in the reliquary
         el.animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'none' }],
           { duration: 280, delay: 220, fill: 'backwards', easing: 'ease-out' });
         return;
@@ -265,7 +417,7 @@ details p { margin: .6em 0; }
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(to.width - from.width) < 1) return;
       const g = el.cloneNode(true);
       g.className = el.className.replace(/\b(fresh|can|sel|inline)\b/g, '') + ' ghost';
-      g.removeAttribute('data-card'); g.removeAttribute('data-act');
+      for (const a of ['data-card', 'data-src', 'data-dst', 'data-act']) g.removeAttribute(a);
       g.style.cssText = `position:fixed;left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px;` +
         'aspect-ratio:auto;margin:0;z-index:50;pointer-events:none;transform-origin:0 0';
       document.body.appendChild(g);
@@ -280,112 +432,10 @@ details p { margin: .6em 0; }
   }
 
   function render() {
-    const old = places();
+    const old = Object.assign(places(), G.flyFrom || {});
+    G.flyFrom = null;
     draw();
     slide(old);
-  }
-
-  function draw() {
-    const s = G.s, myTurn = s.toMove === 0 && s.winner < 0;
-    const hand = G.plot ? G.plot.hand : s.hands[0];
-
-    $('opp').innerHTML = [0, 1, 2, 3].map((t) => {
-      const c = s.hands[1][t];
-      return c === NONE ? slotHtml(t) : cardHtml(c, null, G.fresh['o' + t] ? 'fresh' : '');
-    }).join('');
-
-    $('me').innerHTML = [0, 1, 2, 3].map((t) => {
-      const c = hand[t];
-      let cls = G.fresh['m' + t] ? 'fresh' : '', live = false;
-      if (G.mode === 'plot') { live = true; if (G.pick && G.pick.k === 'hand' && G.pick.t === t) cls += ' sel'; }
-      if (G.mode === 'claim-choose' && G.pick.t === t) { live = true; cls += ' can'; }
-      const attrs = live ? `data-act="hand" data-t="${t}"` : null;
-      return c === NONE ? slotHtml(t, attrs, cls) : cardHtml(c, attrs, cls);
-    }).join('');
-
-    $('reliquary').innerHTML = [0, 1, 2, 3].map((t) => {
-      const c = TS.faceUp(s, t), left = Math.max(0, s.dlen[t] - 1);
-      let inner;
-      if (c === NONE) inner = slotHtml(t);
-      else {
-        let cls = G.fresh['d' + t] ? 'fresh' : '', attrs = null;
-        if (myTurn && G.mode === 'idle') { attrs = `data-act="claim" data-t="${t}"`; cls += ' can'; }
-        if (G.mode === 'claim-choose' && G.pick.t === t) { attrs = `data-act="claim" data-t="${t}"`; cls += ' can'; }
-        if (G.mode === 'claim-place' && G.pick.t === t && G.pick.played === c) cls += ' sel';
-        inner = cardHtml(c, attrs, cls);
-      }
-      return `<div class="pile">${inner}${c === NONE ? '' : `<small aria-label="${left} more beneath">${left}</small>`}</div>`;
-    }).join('');
-
-    renderRealm();
-
-    // prompt, buttons, log
-    let text = G.note, buttons = '';
-    if (s.winner >= 0) text = '';
-    else if (!myTurn) text = text || 'The opponent is thinking.';
-    else if (G.mode === 'idle') {
-      text = text || 'Your turn. Claim a relic from the reliquary, or tap a glowing relic on your row to plot.';
-      buttons = '<button class="btn" type="button" data-act="pass">Pass</button>';
-    } else if (G.mode === 'claim-choose') {
-      text = text || `You already hold a ${KIND[G.pick.t]}. Tap the one to send to the realm.`;
-      buttons = '<button class="btn" type="button" data-act="cancel">Cancel</button>';
-    } else if (G.mode === 'claim-place') {
-      text = text || 'Tap a glowing place in the realm.';
-      buttons = '<button class="btn" type="button" data-act="cancel">Cancel</button>';
-    } else if (G.mode === 'plot-pick') {
-      text = text || 'Two diagonals rise from that relic. Tap another relic on the one you want.';
-      buttons = '<button class="btn" type="button" data-act="cancel">Cancel</button>';
-    } else if (G.mode === 'plot') {
-      text = text || 'Tap two relics to swap them: within the diagonal, or between the diagonal and your own.';
-      const ready = G.plot.cells.every((c) => c !== NONE) && G.plot.cells.some((c, i) => c !== G.plot.orig[i]);
-      buttons = `<button class="btn primary" type="button" data-act="confirm" ${ready ? '' : 'disabled'}>Confirm plot</button>
-                 <button class="btn" type="button" data-act="cancel">Cancel</button>`;
-    }
-    $('prompt').textContent = text;
-    $('prompt').className = 'prompt' + (G.warn ? ' warn' : '');
-    $('actions').innerHTML = buttons;
-    $('log').innerHTML = G.log.slice(0, 5).map((l) => `<li>${l}</li>`).join('');
-    $('opp-note').textContent = ['', 'Squire', 'Knight', '', 'Regent'][G.depth] || '';
-    G.note = ''; G.warn = false;
-  }
-
-  function renderRealm() {
-    const s = G.s, trig = triggers();
-    const open = TS.openSlots(s);
-    let lo = s.lo, hi = s.hi;
-    for (const [, x] of open) { lo = Math.min(lo, x); hi = Math.max(hi, x); }
-    const wrap = $('realm-wrap'), el = $('realm');
-    const avail = Math.max(240, wrap.clientWidth - 22);
-    const cols = (hi - lo) / 2 + 1, gap = 6;
-    const cw = Math.max(34, Math.min(62, Math.floor(avail / cols) - gap));
-    const ch = Math.round(cw * 1.3);
-    el.style.setProperty('--cw', cw + 'px');
-    el.style.width = Math.ceil(cols * (cw + gap) - gap) + 'px';
-    el.style.height = 3 * ch + 2 * gap + 'px';
-    const pos = (r, x) => `style="left:${((x - lo) / 2) * (cw + gap)}px;top:${r * (ch + gap)}px"`;
-    const inLine = {};
-    if (G.plot) G.plot.line.forEach(([r, x], i) => { inLine[key(r, x)] = i; });
-    const pickable = {};
-    if (G.mode === 'plot-pick') G.pick.lines.forEach((line, li) => { for (const [r, x] of line.slice(1)) pickable[key(r, x)] = li; });
-    let html = '';
-    for (let x = lo; x <= hi; x++) for (let r = 0; r < 3; r++) {
-      let c = s.cells[TS.cid(r, x)];
-      const k = key(r, x);
-      if (k in inLine) c = G.plot.cells[inLine[k]];
-      if (c === NONE && !(k in inLine)) continue;
-      let cls = G.fresh[k] ? 'fresh' : '', attrs = null;
-      if (k in inLine) {
-        attrs = `data-act="cell" data-i="${inLine[k]}"`;
-        cls += G.pick && G.pick.k === 'cell' && G.pick.i === inLine[k] ? ' sel' : ' inline';
-      } else if (G.mode === 'idle' && r === 2 && trig[x]) { attrs = `data-act="trigger" data-x="${x}"`; cls += ' can'; }
-      else if (k in pickable) { attrs = `data-act="line" data-li="${pickable[k]}"`; cls += ' can'; }
-      else if (G.mode === 'plot-pick' && r === 2 && x === G.pick.x) cls += ' sel';
-      html += c === NONE ? slotHtml(null, attrs + ' ' + pos(r, x), cls) : cardHtml(c, attrs ? attrs + ' ' + pos(r, x) : null, cls).replace('<div class', `<div ${pos(r, x)} class`);
-    }
-    if (G.mode === 'claim-place') {
-      for (const [r, x] of open) html += slotHtml(null, `data-act="place" data-r="${r}" data-x="${x}" ${pos(r, x)}`, 'can');
-    }
-    el.innerHTML = html;
   }
 
   // ----- playing moves -----
@@ -407,32 +457,33 @@ details p { margin: .6em 0; }
   }
 
   function play(m) {
-    const before = G.s, who = before.toMove;
-    const succ = TS.successors(before);
-    const hit = succ.find((t) => JSON.stringify(t.m) === JSON.stringify(m));
-    if (!hit) { G.note = 'That move is not allowed.'; G.warn = true; render(); return false; }
-    commit(before, hit, who);
-    return true;
+    const before = G.s;
+    const hit = TS.successors(before).find((t) => JSON.stringify(t.m) === JSON.stringify(m));
+    if (!hit) { say('That move is not allowed.'); return render(); }
+    commit(before, hit, before.toMove);
   }
 
   function commit(before, hit, who) {
     const after = hit.s;
     TS.flip(after);
-    const fresh = {};
+    const fr = {};
     for (let x = after.lo; x <= after.hi; x++) for (let r = 0; r < 3; r++) {
-      if (after.cells[TS.cid(r, x)] !== before.cells[TS.cid(r, x)]) fresh[key(r, x)] = 1;
+      if (after.cells[TS.cid(r, x)] !== before.cells[TS.cid(r, x)]) fr[key(r, x)] = 1;
     }
     for (let t = 0; t < 4; t++) {
-      if (after.hands[0][t] !== before.hands[0][t]) fresh['m' + t] = 1;
-      if (after.hands[1][t] !== before.hands[1][t]) fresh['o' + t] = 1;
-      if (TS.faceUp(after, t) !== TS.faceUp(before, t)) fresh['d' + t] = 1;
+      if (after.hands[0][t] !== before.hands[0][t]) fr['m' + t] = 1;
+      if (after.hands[1][t] !== before.hands[1][t]) fr['o' + t] = 1;
+      if (TS.faceUp(after, t) !== TS.faceUp(before, t)) fr['d' + t] = 1;
     }
     G.log.unshift(describe(who, before, hit.m, after));
-    G.s = after; G.fresh = fresh; G.mode = 'idle'; G.pick = null; G.plot = null;
+    G.s = after; G.fresh = fr; reset();
     if (after.winner >= 0) {
       const h = ROMAN[house(after.hands[after.winner][0])];
       $('banner-text').textContent = after.winner === 0 ? `You have united House ${h}.` : `The opponent has united House ${h}.`;
       $('banner').hidden = false;
+      document.body.classList.remove('flash');
+      void document.body.offsetWidth;
+      document.body.classList.add('flash');
     }
     render();
     if (after.winner < 0 && after.toMove === 1) opponentSoon();
@@ -443,77 +494,146 @@ details p { margin: .6em 0; }
       const s = G.s;
       if (s.winner >= 0 || s.toMove !== 1) return;
       const succ = TS.successors(s);
-      const i = TS.choose(s, succ, { net: NET, depth: G.depth, rivalry: 0 });
-      commit(s, succ[i], 1);
-    }, 500);
+      commit(s, succ[TS.choose(s, succ, { net: NET, depth: G.depth, rivalry: 0 })], 1);
+    }, 550);
   }
 
+  // Pick up a diagonal: its three relics join my hand and must be replaced.
   function startPlot(line) {
-    G.mode = 'plot'; G.pick = null;
     const cells = line.map(([r, x]) => G.s.cells[TS.cid(r, x)]);
-    G.plot = { line, cells, orig: cells.slice(), hand: Array.from(G.s.hands[0]) };
+    const mine = Array.from(G.s.hands[0]).filter((c) => c !== NONE);
+    G.mode = 'plot'; G.pick = null; G.lines = null;
+    G.plot = { line, orig: cells, placed: [NONE, NONE, NONE], pool: mine.concat(cells) };
   }
 
-  // Move the relic on diagonal place i into my hand and relic b (or nothing) onto the diagonal.
-  function exchange(i, b) {
-    const P = G.plot, a = P.cells[i], nh = P.hand.slice();
-    if (b !== NONE) nh[ctype(b)] = NONE;
-    if (a !== NONE) {
-      if (nh[ctype(a)] !== NONE) {
-        G.note = `You would hold two ${KIND[ctype(a)]}s. Swap it with your own ${KIND[ctype(a)]}, or put that one down first.`;
-        G.warn = true;
-        return;
-      }
-      nh[ctype(a)] = a;
-    }
-    P.cells[i] = b; P.hand = nh;
-  }
-
-  document.addEventListener('click', (e) => {
-    const el = e.target.closest('[data-act]');
-    if (!el) return;
-    const act = el.dataset.act, s = G.s;
-    if (s.winner >= 0 || s.toMove !== 0) return;
-    if (act === 'pass') return void play(['pass']);
-    if (act === 'cancel') { G.mode = 'idle'; G.pick = null; G.plot = null; return render(); }
-    if (act === 'claim') {
-      const t = +el.dataset.t, c = TS.faceUp(s, t);
-      if (G.mode === 'idle') {
-        if (s.hands[0][t] === NONE) return void play(['claim', t, null, null]);
-        G.mode = 'claim-choose'; G.pick = { t };
-      } else if (G.mode === 'claim-choose') { G.mode = 'claim-place'; G.pick = { t, played: c }; }
-      return render();
-    }
-    if (act === 'hand') {
-      const t = +el.dataset.t;
-      if (G.mode === 'claim-choose') { G.mode = 'claim-place'; G.pick = { t, played: s.hands[0][t] }; return render(); }
-      if (G.mode === 'plot') {
-        const P = G.plot;
-        if (G.pick && G.pick.k === 'cell') { exchange(G.pick.i, P.hand[t]); G.pick = null; }
-        else if (G.pick && G.pick.k === 'hand' && G.pick.t === t) G.pick = null;
-        else if (P.hand[t] !== NONE) G.pick = { k: 'hand', t };
+  // One relic moved from a source to a target, by drag or by two taps.
+  function move(src, dst) {
+    const s = G.s;
+    if (src.k === 'deck' && G.mode === 'idle') {
+      const t = src.t, c = TS.faceUp(s, t), held = s.hands[0][t];
+      if (dst.k === 'hand') {
+        if (held === NONE) return play(['claim', t, null, null]);
+        G.mode = 'claim'; G.claim = { t, c, held }; G.pick = null;
         return render();
       }
-    }
-    if (act === 'place') return void play(['claim', G.pick.t, G.pick.played, [+el.dataset.r, +el.dataset.x]]);
-    if (act === 'trigger') {
-      const x = +el.dataset.x, lines = triggers()[x];
-      if (lines.length === 1) startPlot(lines[0]);
-      else { G.mode = 'plot-pick'; G.pick = { x, lines }; }
+      if (dst.k === 'cell') {
+        if (held !== NONE) return play(['claim', t, c, [dst.r, dst.x]]);
+        say(`You hold no ${KIND[t]} yet, so that one goes to your relics.`);
+      }
       return render();
     }
-    if (act === 'line') { startPlot(G.pick.lines[+el.dataset.li]); return render(); }
-    if (act === 'cell') {
-      const i = +el.dataset.i, P = G.plot;
-      if (!G.pick) { if (P.cells[i] !== NONE) G.pick = { k: 'cell', i }; }
-      else if (G.pick.k === 'cell') {
-        if (G.pick.i !== i) [P.cells[i], P.cells[G.pick.i]] = [P.cells[G.pick.i], P.cells[i]];
-        G.pick = null;
-      } else { exchange(i, P.hand[G.pick.t]); G.pick = null; }
-      return render();
+    if (G.mode === 'claim' && src.k === 'hand' && dst.k === 'cell') return play(['claim', G.claim.t, src.card, [dst.r, dst.x]]);
+    if (G.mode === 'plot') {
+      const P = G.plot;
+      if (src.k === 'hand' && dst.k === 'place') {
+        const at = P.pool.indexOf(src.card);
+        if (at >= 0) {
+          P.pool.splice(at, 1);
+          if (P.placed[dst.i] !== NONE) P.pool.push(P.placed[dst.i]);
+          P.placed[dst.i] = src.card;
+        }
+      } else if (src.k === 'place' && dst.k === 'place') {
+        [P.placed[src.i], P.placed[dst.i]] = [P.placed[dst.i], P.placed[src.i]];
+      } else if (src.k === 'place' && dst.k === 'hand' && P.placed[src.i] !== NONE) {
+        P.pool.push(P.placed[src.i]); P.placed[src.i] = NONE;
+      }
     }
-    if (act === 'confirm') return void play(['plot', G.plot.line, G.plot.cells.slice()]);
+    G.pick = null;
+    render();
+  }
+
+  function confirmPlot() {
+    const P = G.plot;
+    const kinds = P.pool.map(ctype);
+    const twice = kinds.find((t, i) => kinds.indexOf(t) !== i);
+    if (twice !== undefined) { say(`You would hold two ${KIND[twice]}s. Put one of them back.`); return render(); }
+    if (P.placed.every((c, i) => c === P.orig[i])) { say('That leaves everything as it was. Change something, or cancel.'); return render(); }
+    play(['plot', P.line, P.placed.slice()]);
+  }
+
+  const srcOf = (el) => ({ k: el.dataset.src, t: +el.dataset.t, card: +el.dataset.card, i: +el.dataset.i });
+  const dstOf = (el) => ({ k: el.dataset.dst, r: +el.dataset.r, x: +el.dataset.x, i: +el.dataset.i });
+  const samePick = (src) => G.pick && G.pick.k === src.k && (src.k === 'hand' ? G.pick.card === src.card : G.pick.i === src.i);
+
+  // ----- taps -----
+
+  let justDragged = false;
+  document.addEventListener('click', (e) => {
+    if (justDragged || !G || !myTurn()) return;
+    const actEl = e.target.closest('[data-act]');
+    if (actEl) {
+      const act = actEl.dataset.act;
+      if (act === 'pass') return play(['pass']);
+      if (act === 'cancel') { reset(); return render(); }
+      if (act === 'confirm') return confirmPlot();
+      if (act === 'trigger') {
+        const x = +actEl.dataset.x, lines = triggers()[x];
+        if (lines.length === 1) startPlot(lines[0]);
+        else { G.mode = 'plot-pick'; G.lines = { x, lines }; }
+        return render();
+      }
+      if (act === 'line') { startPlot(G.lines.lines[+actEl.dataset.li]); return render(); }
+      return;
+    }
+    const srcEl = e.target.closest('[data-src]'), dstEl = e.target.closest('[data-dst]');
+    const src = srcEl && srcOf(srcEl);
+    if (G.pick && dstEl && !(src && samePick(src)) && !(G.pick.k === 'hand' && dstEl.dataset.dst === 'hand')) {
+      return move(G.pick, dstOf(dstEl));
+    }
+    if (!src) return;
+    if (src.k === 'deck') return move(src, { k: 'hand' });
+    G.pick = samePick(src) ? null : src;
+    render();
   });
+
+  // ----- drag and drop -----
+
+  let drag = null;
+  const targetAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest('[data-dst]'); };
+  function endDrag() {
+    if (!drag) return;
+    if (drag.ghost) drag.ghost.remove();
+    document.querySelectorAll('.over').forEach((el) => el.classList.remove('over'));
+    document.body.classList.remove('dragging');
+    drag = null;
+  }
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('[data-src]');
+    if (!el || !G || !myTurn() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    drag = { el, id: e.pointerId, x0: e.clientX, y0: e.clientY, ghost: null };
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if (!drag.ghost) {
+      if (Math.hypot(dx, dy) < 7) return;
+      const r = drag.el.getBoundingClientRect(), g = drag.el.cloneNode(true);
+      g.className = drag.el.className.replace(/\b(fresh|can|sel|inline)\b/g, '') + ' ghost';
+      for (const a of ['data-card', 'data-src', 'data-dst', 'data-act']) g.removeAttribute(a);
+      g.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;aspect-ratio:auto;margin:0;z-index:60;pointer-events:none`;
+      document.body.appendChild(g);
+      drag.ghost = g; drag.el.style.opacity = '.25';
+      document.body.classList.add('dragging');
+    }
+    drag.ghost.style.transform = `translate(${dx}px,${dy}px) scale(1.06)`;
+    document.querySelectorAll('.over').forEach((el) => el.classList.remove('over'));
+    const t = targetAt(e.clientX, e.clientY);
+    if (t && t !== drag.el) t.classList.add('over');
+    e.preventDefault();
+  });
+  document.addEventListener('pointerup', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag.ghost) { drag = null; return; } // a tap: the click handler deals with it
+    const src = srcOf(drag.el), card = drag.el.dataset.card;
+    const t = targetAt(e.clientX, e.clientY);
+    G.flyFrom = { [card]: drag.ghost.getBoundingClientRect() }; // slide on from where it was dropped
+    endDrag();
+    justDragged = true; setTimeout(() => { justDragged = false; }, 60);
+    if (t) move(src, dstOf(t)); else render();
+  });
+  document.addEventListener('pointercancel', () => { if (drag && drag.ghost) { endDrag(); render(); } else drag = null; });
+
+  // ----- new game, resize, keeping a game across a republish -----
 
   const openNew = () => { $('new-panel').hidden = false; $('new-go').focus(); };
   $('new-open').addEventListener('click', openNew);
@@ -523,9 +643,8 @@ details p { margin: .6em 0; }
     $('new-panel').hidden = true;
     deal(+document.querySelector('input[name=strength]:checked').value, +document.querySelector('input[name=first]:checked').value);
   });
-  window.addEventListener('resize', () => { if (G) renderRealm(); });
+  window.addEventListener('resize', () => { if (G && !drag) drawRealm(); });
 
-  // Keep the game across a republish of this page.
   const pack = () => ({
     v: 1, depth: G.depth, log: G.log.slice(0, 5),
     s: { ...G.s, cells: Array.from(G.s.cells), hands: G.s.hands.map((h) => Array.from(h)) },
@@ -533,10 +652,10 @@ details p { margin: .6em 0; }
   function start(saved) {
     if (saved && saved.v === 1 && saved.s) {
       const s = saved.s;
-      G = {
+      G = Object.assign({
         s: { ...s, cells: Uint8Array.from(s.cells), hands: s.hands.map((h) => Uint8Array.from(h)) },
-        depth: saved.depth, mode: 'idle', pick: null, plot: null, log: saved.log || [], fresh: {}, note: '', warn: false,
-      };
+        depth: saved.depth, log: saved.log || [],
+      }, fresh());
       render();
       if (G.s.winner < 0 && G.s.toMove === 1) opponentSoon();
     } else deal(4, 0);
