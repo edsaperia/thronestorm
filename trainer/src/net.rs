@@ -1,6 +1,6 @@
 //! Features and a small value network.
 //!
-//! The network scores a position for the player to move, in [-1, 1]. Houses are
+//! The network estimates, for a position, each player's chance of winning. Houses are
 //! interchangeable, so each house gets the same small sub-network and the
 //! results are summed before the final layers.
 
@@ -225,10 +225,13 @@ const O_B1: usize = O_W1 + F * D1;
 const O_W2: usize = O_B1 + D1;
 const O_B2: usize = O_W2 + (D1 + G) * D2;
 const O_W3: usize = O_B2 + D2;
-const O_B3: usize = O_W3 + D2;
-pub const NP: usize = O_B3 + 1;
+const O_B3: usize = O_W3 + D2 * 2;
+pub const NP: usize = O_B3 + 2;
 const POOL_SCALE: f32 = 0.25;
 
+/// Two outputs in [0, 1]: the (discounted) chance that the player to move
+/// wins, and the chance that the other player wins. They need not sum to one;
+/// the remainder is the chance that nobody does.
 #[derive(Clone)]
 pub struct Net {
     pub p: Vec<f32>,
@@ -247,13 +250,14 @@ impl Net {
         init(O_W2, O_B2, D1 + G);
         init(O_W3, O_B3, D2);
         for v in &mut p[O_W3..O_B3] {
-            *v *= 0.1; // start near zero so early play is close to uniform
+            *v *= 0.1; // start flat so early play is close to uniform
         }
         Net { p }
     }
 
-    /// Forward pass. If `grad` is given, accumulates d(0.5 * (v - target)^2).
-    pub fn eval(&self, f: &Feats, train: Option<(f32, &mut [f32])>) -> f32 {
+    /// Forward pass. If `train` is given, accumulates the gradient of the
+    /// squared error against the two targets.
+    pub fn eval(&self, f: &Feats, train: Option<([f32; 2], &mut [f32])>) -> [f32; 2] {
         let p = &self.p;
         let nh = f.houses.len();
         let mut h1 = vec![0f32; nh * D1];
@@ -278,18 +282,27 @@ impl Net {
             }
             h2[j] = a.tanh();
         }
-        let mut a = p[O_B3];
-        for j in 0..D2 {
-            a += h2[j] * p[O_W3 + j];
-        }
-        let v = a.tanh();
-        if let Some((target, g)) = train {
-            let d3 = (v - target) * (1.0 - v * v);
-            g[O_B3] += d3;
-            let mut dz = [0f32; D1 + G];
+        let mut v = [0f32; 2];
+        for k in 0..2 {
+            let mut a = p[O_B3 + k];
             for j in 0..D2 {
-                g[O_W3 + j] += d3 * h2[j];
-                let d2 = d3 * p[O_W3 + j] * (1.0 - h2[j] * h2[j]);
+                a += h2[j] * p[O_W3 + j * 2 + k];
+            }
+            v[k] = 1.0 / (1.0 + (-a).exp());
+        }
+        if let Some((target, g)) = train {
+            let d3 = [(v[0] - target[0]) * v[0] * (1.0 - v[0]), (v[1] - target[1]) * v[1] * (1.0 - v[1])];
+            let mut dz = [0f32; D1 + G];
+            for k in 0..2 {
+                g[O_B3 + k] += d3[k];
+            }
+            for j in 0..D2 {
+                let mut dh = 0.0;
+                for k in 0..2 {
+                    g[O_W3 + j * 2 + k] += d3[k] * h2[j];
+                    dh += d3[k] * p[O_W3 + j * 2 + k];
+                }
+                let d2 = dh * (1.0 - h2[j] * h2[j]);
                 g[O_B2 + j] += d2;
                 for i in 0..D1 + G {
                     g[O_W2 + i * D2 + j] += d2 * z[i];
@@ -312,7 +325,7 @@ impl Net {
 
     pub fn save(&self, path: &str) {
         let mut bytes = Vec::with_capacity(NP * 4 + 16);
-        for v in [F as u32, G as u32, D1 as u32, D2 as u32] {
+        for v in [F as u32, G as u32, D1 as u32, D2 as u32 + 1000] {
             bytes.extend_from_slice(&v.to_le_bytes());
         }
         for v in &self.p {
@@ -324,7 +337,7 @@ impl Net {
     pub fn load(path: &str) -> Net {
         let bytes = std::fs::read(path).expect("could not read network file");
         let dims: Vec<u32> = (0..4).map(|i| u32::from_le_bytes(bytes[i * 4..i * 4 + 4].try_into().unwrap())).collect();
-        assert_eq!(dims, [F as u32, G as u32, D1 as u32, D2 as u32], "network file has a different shape");
+        assert_eq!(dims, [F as u32, G as u32, D1 as u32, D2 as u32 + 1000], "network file has a different shape");
         let p = bytes[16..].chunks(4).map(|c| f32::from_le_bytes(c.try_into().unwrap())).collect::<Vec<_>>();
         assert_eq!(p.len(), NP);
         Net { p }

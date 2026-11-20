@@ -1,8 +1,11 @@
 //! Self-play trainer for Thronestorm.
 //!
 //!   trainer train <houses> <games> <net.bin> [threads=N] [resume=FILE] [eps=0.1]
-//!                 [lambda=0.7] [lr=0.001] [seed=1] [depth=2]
-//!   trainer eval <houses> <games> <A> <B>      A, B: greedy | random | FILE | FILE@1 | FILE@2d
+//!                 [lambda=0.7] [lr=0.001] [seed=1] [depth=2] [rivalry=1] [gamma=1]
+//!   rivalry: utility = my win chance - rivalry * opponent's. 1 = a draw is half
+//!   a win; 0 = a draw is as bad as a loss. gamma < 1 makes later wins worth less.
+//!   trainer eval <houses> <games> <A> <B> [rivalry=1] [rivalryA=] [rivalryB=]
+//!                 A, B: greedy | random | FILE | FILE@1 | FILE@2d
 //!   trainer transcript <houses> <games> <seed>
 //!
 //! Every player first applies exact one-move tactics: take a win if there is
@@ -28,7 +31,8 @@ fn no_pass() -> bool {
 
 #[derive(Clone)]
 enum Player {
-    Net(Arc<Net>, f32, u8, bool), // network, exploration rate, lookahead (1 or 2), always dig
+    /// network, exploration rate, lookahead (1 or 2), always dig, rivalry
+    Net(Arc<Net>, f32, u8, bool, f32),
     Greedy,
     Random,
 }
@@ -68,7 +72,7 @@ fn choose(pl: &Player, s: &State, succ: &[(State, Move)], rng: &mut Rng) -> usiz
             let best: Vec<usize> = cands.into_iter().filter(|&i| key(i) == top).collect();
             best[rng.below(best.len())]
         }
-        Player::Net(net, eps, depth, dig) => {
+        Player::Net(net, eps, depth, dig, rivalry) => {
             if *eps > 0.0 && rng.unit() < *eps {
                 return cands[rng.below(cands.len())];
             }
@@ -87,9 +91,16 @@ fn choose(pl: &Player, s: &State, succ: &[(State, Move)], rng: &mut Rng) -> usiz
                     cands = claims;
                 }
             }
-            // the successor is scored for the opponent, so lower is better
-            let mut scored: Vec<(f32, usize)> =
-                cands.iter().map(|&i| (net.eval(&features(&succ[i].0), None), i)).collect();
+            // The successor is scored with the opponent to move, so my chance is
+            // the second output. Utility = my win chance - rivalry * theirs:
+            // rivalry 1 treats a draw as half a win, rivalry 0 as a loss.
+            let mut scored: Vec<(f32, usize)> = cands
+                .iter()
+                .map(|&i| {
+                    let v = net.eval(&features(&succ[i].0), None);
+                    (rivalry * v[0] - v[1], i)
+                })
+                .collect();
             scored.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
             if *depth >= 2 {
                 // skip moves that let the opponent set up such a position himself
@@ -123,19 +134,21 @@ fn forced_win(after: &State, attacker: usize, buf: &mut Vec<(State, Move)>) -> b
 struct Game {
     winner: Option<usize>,
     turns: usize,
-    samples: Vec<(Feats, f32)>,
+    samples: Vec<(Feats, [f32; 2])>,
+    kinds: [usize; 3], // passes, claims, plots
+    won_by_plot: bool,
     moves: Vec<(Move, usize)>,
     deck_left: usize,
-    passes: usize,
 }
 
-fn play(start: State, players: [&Player; 2], rng: &mut Rng, record: Option<(&Net, f32)>, log: bool) -> Game {
+fn play(start: State, players: [&Player; 2], rng: &mut Rng, record: Option<(&Net, f32, f32)>, log: bool) -> Game {
     let mut s = start;
     let mut succ = Vec::new();
     let mut after: Vec<Feats> = Vec::new();
     let mut moves = Vec::new();
     let mut turns = 0;
-    let mut passes = 0;
+    let mut kinds = [0usize; 3];
+    let mut won_by_plot = false;
     while s.winner.is_none() && turns < MAX_TURNS {
         s.successors(&mut succ);
         if no_pass() && succ.len() > 1 {
@@ -145,7 +158,13 @@ fn play(start: State, players: [&Player; 2], rng: &mut Rng, record: Option<(&Net
         if log {
             moves.push((succ[i].1, succ.len()));
         }
-        passes += (succ[i].1 == Move::Pass) as usize;
+        let kind = match succ[i].1 {
+            Move::Pass => 0,
+            Move::Claim { .. } => 1,
+            Move::Plot { .. } => 2,
+        };
+        kinds[kind] += 1;
+        won_by_plot = kind == 2;
         s = succ[i].0;
         if record.is_some() && s.winner.is_none() {
             after.push(features(&s));
@@ -154,24 +173,27 @@ fn play(start: State, players: [&Player; 2], rng: &mut Rng, record: Option<(&Net
         turns += 1;
     }
     // TD(lambda) targets over the positions each player left for the other.
+    // Outputs are [to-move player's win value, other player's]; one turn later
+    // the roles swap, and a win is worth gamma per turn of delay.
     let mut samples = Vec::new();
-    if let Some((net, lambda)) = record {
+    if let Some((net, lambda, gamma)) = record {
         let k = after.len();
         if k > 0 {
-            let values: Vec<f32> = after.iter().map(|f| net.eval(f, None)).collect();
-            let mut targets = vec![0f32; k];
-            // the player to move in the last recorded position either won next move or the game was cut off
-            targets[k - 1] = if s.winner.is_some() { 1.0 } else { 0.0 };
+            let values: Vec<[f32; 2]> = after.iter().map(|f| net.eval(f, None)).collect();
+            let mut targets = vec![[0f32; 2]; k];
+            // the player to move in the last recorded position won on the next move, or the game was cut off
+            targets[k - 1] = if s.winner.is_some() { [gamma, 0.0] } else { [0.0, 0.0] };
             for t in (0..k - 1).rev() {
-                targets[t] = -((1.0 - lambda) * values[t + 1] + lambda * targets[t + 1]);
+                let mix = |j: usize| (1.0 - lambda) * values[t + 1][j] + lambda * targets[t + 1][j];
+                targets[t] = [gamma * mix(1), gamma * mix(0)];
             }
             samples = after.into_iter().zip(targets).collect();
         }
     }
-    Game { winner: s.winner, turns, samples, moves, deck_left: s.dlen.iter().sum(), passes }
+    Game { winner: s.winner, turns, samples, moves, deck_left: s.dlen.iter().sum(), kinds, won_by_plot }
 }
 
-fn load_player(name: &str) -> Player {
+fn load_player(name: &str, rivalry: f32) -> Player {
     match name {
         "greedy" => Player::Greedy,
         "random" => Player::Random,
@@ -181,14 +203,26 @@ fn load_player(name: &str) -> Player {
             let (file, tag) = spec.rsplit_once('@').unwrap_or((spec, "2"));
             let dig = tag.ends_with('d');
             let depth: u8 = tag.trim_end_matches('d').parse().expect("lookahead must be 1 or 2");
-            Player::Net(Arc::new(Net::load(file)), 0.0, depth, dig)
+            Player::Net(Arc::new(Net::load(file)), 0.0, depth, dig, rivalry)
         }
     }
 }
 
-/// Returns (A wins, B wins, unfinished, mean turns) with seats alternating.
-fn matchup(n: usize, games: usize, a: &Player, b: &Player, seed: u64, threads: usize) -> (f32, f32, f32, f32, f32, f32) {
-    let results: Vec<(Option<usize>, usize, usize, usize, usize)> = std::thread::scope(|sc| {
+struct Stats {
+    a: f32,
+    b: f32,
+    unfinished: f32,
+    turns: f32,
+    first: f32,        // share of decided games won by the first player
+    by_plot: f32,      // share of decided games won with a plot
+    kinds: [f32; 3],   // share of all moves: passes, claims, plots
+    stall_left: f32,   // relics left in the decks in unfinished games
+    decided_left: f32, // relics left in the decks in decided games
+}
+
+/// A against B with seats alternating.
+fn matchup(n: usize, games: usize, a: &Player, b: &Player, seed: u64, threads: usize) -> Stats {
+    let results: Vec<(Game, usize)> = std::thread::scope(|sc| {
         let hs: Vec<_> = (0..threads)
             .map(|t| {
                 sc.spawn(move || {
@@ -198,8 +232,7 @@ fn matchup(n: usize, games: usize, a: &Player, b: &Player, seed: u64, threads: u
                         let mut rng = Rng(seed.wrapping_mul(7919).wrapping_add(g as u64));
                         let seat = g % 2; // seat of A
                         let players = if seat == 0 { [a, b] } else { [b, a] };
-                        let r = play(State::new(n, &mut rng), players, &mut rng, None, false);
-                        out.push((r.winner, r.turns, seat, r.deck_left, r.passes));
+                        out.push((play(State::new(n, &mut rng), players, &mut rng, None, false), seat));
                         g += threads;
                     }
                     out
@@ -209,14 +242,24 @@ fn matchup(n: usize, games: usize, a: &Player, b: &Player, seed: u64, threads: u
         hs.into_iter().flat_map(|h| h.join().unwrap()).collect()
     });
     let tot = results.len() as f32;
-    let aw = results.iter().filter(|(w, _, seat, _, _)| *w == Some(*seat)).count() as f32;
-    let bw = results.iter().filter(|(w, _, seat, _, _)| w.is_some() && *w != Some(*seat)).count() as f32;
-    let turns: f32 = results.iter().map(|r| r.1 as f32).sum();
-    let stalled: Vec<_> = results.iter().filter(|r| r.0.is_none()).collect();
-    let sn = stalled.len().max(1) as f32;
-    let left = stalled.iter().map(|r| r.3 as f32).sum::<f32>() / sn;
-    let pass = stalled.iter().map(|r| r.4 as f32 / r.1 as f32).sum::<f32>() / sn;
-    (aw / tot, bw / tot, 1.0 - (aw + bw) / tot, turns / tot, left, pass)
+    let cnt = |f: &dyn Fn(&(Game, usize)) -> bool| results.iter().filter(|r| f(r)).count() as f32;
+    let aw = cnt(&|(g, seat)| g.winner == Some(*seat));
+    let bw = cnt(&|(g, seat)| g.winner.is_some() && g.winner != Some(*seat));
+    let decided = (aw + bw).max(1.0);
+    let stalled = (tot - aw - bw).max(1.0);
+    let moves: f32 = results.iter().map(|(g, _)| g.turns as f32).sum();
+    let kind = |k: usize| results.iter().map(|(g, _)| g.kinds[k] as f32).sum::<f32>() / moves;
+    Stats {
+        a: aw / tot,
+        b: bw / tot,
+        unfinished: 1.0 - (aw + bw) / tot,
+        turns: results.iter().filter(|(g, _)| g.winner.is_some()).map(|(g, _)| g.turns as f32).sum::<f32>() / decided,
+        first: cnt(&|(g, _)| g.winner == Some(0)) / decided,
+        by_plot: cnt(&|(g, _)| g.winner.is_some() && g.won_by_plot) / decided,
+        kinds: [kind(0), kind(1), kind(2)],
+        stall_left: results.iter().filter(|(g, _)| g.winner.is_none()).map(|(g, _)| g.deck_left as f32).sum::<f32>() / stalled,
+        decided_left: results.iter().filter(|(g, _)| g.winner.is_some()).map(|(g, _)| g.deck_left as f32).sum::<f32>() / decided,
+    }
 }
 
 fn opt<T: std::str::FromStr>(args: &[String], key: &str, default: T) -> T {
@@ -235,6 +278,8 @@ fn train(args: &[String]) {
     let lr: f32 = opt(args, "lr", 0.001);
     let seed: u64 = opt(args, "seed", 1);
     let depth: u8 = opt(args, "depth", 2);
+    let rivalry: f32 = opt(args, "rivalry", 1.0);
+    let gamma: f32 = opt(args, "gamma", 1.0);
     let resume: String = opt(args, "resume", String::new());
     let mut rng = Rng(seed);
     let mut net = if resume.is_empty() { Net::new(&mut rng) } else { Net::load(&resume) };
@@ -245,7 +290,7 @@ fn train(args: &[String]) {
     let (mut done, mut next_report) = (0usize, 0usize);
     let (mut decided, mut first, mut turns, mut loss, mut nsamp, mut count) = (0f32, 0f32, 0f32, 0f32, 0f32, 0f32);
     let started = std::time::Instant::now();
-    println!("training {n} houses, {games} games, {threads} threads, eps {eps}, lambda {lambda}, lr {lr}");
+    println!("training {n} houses, {games} games, {threads} threads, eps {eps}, lambda {lambda}, lr {lr}, rivalry {rivalry}, gamma {gamma}");
     while done < games {
         let snap = Arc::new(net.clone());
         let batch: Vec<Game> = std::thread::scope(|sc| {
@@ -254,11 +299,11 @@ fn train(args: &[String]) {
                     let snap = snap.clone();
                     let base = seed.wrapping_mul(1_000_003).wrapping_add((done + t * per_thread) as u64);
                     sc.spawn(move || {
-                        let pl = Player::Net(snap.clone(), eps, depth, false);
+                        let pl = Player::Net(snap.clone(), eps, depth, false, rivalry);
                         (0..per_thread)
                             .map(|g| {
                                 let mut rng = Rng(base.wrapping_add(g as u64).wrapping_mul(0x2545F4914F6CDD1D));
-                                play(State::new(n, &mut rng), [&pl, &pl], &mut rng, Some((&snap, lambda)), false)
+                                play(State::new(n, &mut rng), [&pl, &pl], &mut rng, Some((&snap, lambda, gamma)), false)
                             })
                             .collect::<Vec<_>>()
                     })
@@ -266,7 +311,7 @@ fn train(args: &[String]) {
                 .collect();
             hs.into_iter().flat_map(|h| h.join().unwrap()).collect()
         });
-        let mut samples: Vec<&(Feats, f32)> = Vec::new();
+        let mut samples: Vec<&(Feats, [f32; 2])> = Vec::new();
         for g in &batch {
             count += 1.0;
             turns += g.turns as f32;
@@ -283,7 +328,7 @@ fn train(args: &[String]) {
             let mut grad = vec![0f32; NP];
             for (f, target) in chunk {
                 let v = net.eval(f, Some((*target, &mut grad)));
-                loss += (v - target) * (v - target);
+                loss += (v[0] - target[0]).powi(2) + (v[1] - target[1]).powi(2);
                 nsamp += 1.0;
             }
             adam.step(&mut net, &grad, chunk.len() as f32);
@@ -292,8 +337,9 @@ fn train(args: &[String]) {
         if done >= next_report || done >= games {
             next_report += report_every;
             net.save(path);
-            let me = Player::Net(Arc::new(net.clone()), 0.0, depth, false);
-            let (w, l, d, _, _, _) = matchup(n, 200, &me, &Player::Greedy, 99, threads);
+            let me = Player::Net(Arc::new(net.clone()), 0.0, depth, false, rivalry);
+            let st = matchup(n, 200, &me, &Player::Greedy, 99, threads);
+            let (w, l, d) = (st.a, st.b, st.unfinished);
             println!(
                 "games {done:>8} | {:>5.0}s | self-play: decided {:5.1}%, first player {:5.1}% of decided, {:5.1} turns, loss {:.4} | vs greedy: win {:5.1}% lose {:5.1}% unfinished {:5.1}%",
                 started.elapsed().as_secs_f32(),
@@ -362,12 +408,20 @@ fn main() {
         Some("eval") => {
             let n: usize = args[1].parse().unwrap();
             let games: usize = args[2].parse().unwrap();
-            let (a, b) = (load_player(&args[3]), load_player(&args[4]));
+            // rivalry=X sets it for both players; rivalryA= / rivalryB= override
+            let r: f32 = opt(&args, "rivalry", 1.0);
+            let (a, b) = (load_player(&args[3], opt(&args, "rivalryA", r)), load_player(&args[4], opt(&args, "rivalryB", r)));
             let threads = std::thread::available_parallelism().map(|x| x.get()).unwrap_or(1);
-            let (w, l, d, t, left, pass) = matchup(n, games, &a, &b, opt(&args, "seed", 7), threads);
+            let st = matchup(n, games, &a, &b, opt(&args, "seed", 7), threads);
+            println!("{} vs {} over {games} games, {n} houses, seats alternate", args[3], args[4]);
+            println!("  wins {:.1}% / {:.1}%, unfinished {:.1}%", 100.0 * st.a, 100.0 * st.b, 100.0 * st.unfinished);
             println!(
-                "{} vs {} over {games} games ({n} houses, seats alternate): {:.1}% / {:.1}%, unfinished {:.1}%, mean {:.1} turns; unfinished games end with {:.1} relics left in the decks and {:.0}% of their moves were passes",
-                args[3], args[4], 100.0 * w, 100.0 * l, 100.0 * d, t, left, 100.0 * pass
+                "  decided games: {:.1} turns, first player wins {:.1}%, won by plot {:.1}%, {:.1} relics left in decks",
+                st.turns, 100.0 * st.first, 100.0 * st.by_plot, st.decided_left
+            );
+            println!(
+                "  moves: {:.0}% passes, {:.0}% claims, {:.0}% plots; unfinished games leave {:.1} relics in decks",
+                100.0 * st.kinds[0], 100.0 * st.kinds[1], 100.0 * st.kinds[2], st.stall_left
             );
         }
         Some("transcript") => transcript(&args[1..]),
