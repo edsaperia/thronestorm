@@ -32,11 +32,17 @@ plays it against baselines. Its rules are checked against the Python engine.
 
 ```
 cd trainer && cargo build --release
-./target/release/trainer train 10 200000 ../nets/h10.bin          # houses, games, output
-./target/release/trainer train 10 200000 ../nets/h10.bin resume=../nets/h10-v2.bin
-./target/release/trainer eval 10 2000 ../nets/h10.bin greedy       # or random, or another net; FILE@1 = one-move lookahead, FILE@2d = always digs
+# houses, games, output; rivalry=0 treats a draw as a loss, gamma<1 prefers quicker wins
+./target/release/trainer train 10 200000 ../nets/h10-win.bin rivalry=0 gamma=0.98 resume=../nets/h10-win.bin
+./target/release/trainer eval 10 2000 ../nets/h10-win.bin ../nets/h10-win.bin rivalry=0
+./target/release/trainer eval 10 2000 ../nets/h10-win.bin ../nets/h10-half.bin rivalryA=0 rivalryB=1
+./target/release/trainer eval 10 2000 ../nets/h10-win.bin greedy    # or random; FILE@1 = one-move lookahead, FILE@2d = always digs
 ./target/release/trainer transcript 10 200 1 | PYTHONPATH=.. python ../tests/verify_rust.py
 ```
 
-Options for `train`: `threads=`, `eps=` (exploration), `lambda=`, `lr=`, `seed=`.
+`nets/h10-win.bin` was trained with a draw scored as a loss (rivalry 0, gamma 0.98);
+`nets/h10-half.bin` with a draw scored as half a win (rivalry 1). Use the matching
+`rivalry=` when playing them.
+
+Other `train` options: `threads=`, `eps=` (exploration), `lambda=`, `lr=`, `seed=`, `depth=`.
 Set `NOPASS=1` to play the variant where passing is only allowed with no other move.
