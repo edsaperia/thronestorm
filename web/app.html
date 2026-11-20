@@ -89,6 +89,7 @@ button.card.can, button.slot.can { cursor: pointer; }
 .realm { position: relative; margin: 0 auto; }
 .realm > * { position: absolute; width: var(--cw); }
 .realm .num { font-size: calc(var(--cw) * .2); }
+.ghost { box-shadow: 0 6px 14px rgba(0, 0, 0, .6); }
 
 .h0 { --h: #8d929b; --g: #14161a; } .h1 { --h: #2c4585; --g: #fff; }
 .h2 { --h: #2b8cc2; --g: #fff; }    .h3 { --h: #17907f; --g: #fff; }
@@ -219,7 +220,7 @@ details p { margin: .6em 0; }
 
   function cardHtml(c, attrs, cls) {
     const tag = attrs ? 'button type="button"' : 'div';
-    return `<${tag} class="card h${house(c)} ${cls || ''}" ${attrs || ''} aria-label="${nameOf(c)}">${glyph(ctype(c))}<span class="num">${ROMAN[house(c)]}</span></${tag.split(' ')[0]}>`;
+    return `<${tag} class="card h${house(c)} ${cls || ''}" data-card="${c}" ${attrs || ''} aria-label="${nameOf(c)}">${glyph(ctype(c))}<span class="num">${ROMAN[house(c)]}</span></${tag.split(' ')[0]}>`;
   }
   function slotHtml(t, attrs, cls) {
     const tag = attrs ? 'button type="button"' : 'div';
@@ -239,7 +240,52 @@ details p { margin: .6em 0; }
     return out;
   }
 
+  // ----- sliding relics -----
+  // Every relic is unique, so after each redraw a relic that has moved is
+  // flown from where it was to where it is now.
+
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function places() {
+    const m = {};
+    document.querySelectorAll('[data-card]').forEach((el) => { m[el.dataset.card] = el.getBoundingClientRect(); });
+    return m;
+  }
+  function slide(old) {
+    document.querySelectorAll('.ghost').forEach((g) => g.remove());
+    if (calm || !old || !document.body.animate) return;
+    document.querySelectorAll('[data-card]').forEach((el) => {
+      const from = old[el.dataset.card], to = el.getBoundingClientRect();
+      if (!from) {
+        // newly turned up in the reliquary
+        el.animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'none' }],
+          { duration: 280, delay: 220, fill: 'backwards', easing: 'ease-out' });
+        return;
+      }
+      const dx = to.left - from.left, dy = to.top - from.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(to.width - from.width) < 1) return;
+      const g = el.cloneNode(true);
+      g.className = el.className.replace(/\b(fresh|can|sel|inline)\b/g, '') + ' ghost';
+      g.removeAttribute('data-card'); g.removeAttribute('data-act');
+      g.style.cssText = `position:fixed;left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px;` +
+        'aspect-ratio:auto;margin:0;z-index:50;pointer-events:none;transform-origin:0 0';
+      document.body.appendChild(g);
+      el.style.visibility = 'hidden';
+      const fly = g.animate(
+        [{ transform: 'none' }, { transform: `translate(${dx}px,${dy}px) scale(${to.width / from.width},${to.height / from.height})` }],
+        { duration: 380, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      const land = () => { g.remove(); el.style.visibility = ''; };
+      fly.onfinish = land; fly.oncancel = land;
+      setTimeout(land, 460); // in case the animation never reports back, e.g. in a background tab
+    });
+  }
+
   function render() {
+    const old = places();
+    draw();
+    slide(old);
+  }
+
+  function draw() {
     const s = G.s, myTurn = s.toMove === 0 && s.winner < 0;
     const hand = G.plot ? G.plot.hand : s.hands[0];
 
