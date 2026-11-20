@@ -51,8 +51,17 @@ button { font: inherit; color: inherit; }
 .zone-head span { color: var(--dim); font-size: 14px; }
 .slots { display: grid; grid-template-columns: repeat(4, minmax(0, 62px)); gap: 8px; justify-content: center; }
 .slots { align-items: start; }
-.pile { display: grid; gap: 3px; }
-.pile small { color: var(--dim); font-size: 13px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* reliquary: a column of four piles to the left of the realm */
+.table { display: flex; gap: 10px; align-items: center; }
+.table .realm-wrap { flex: 1; min-width: 0; }
+.rel { display: grid; gap: 7px; width: 46px; flex: none; }
+.rel .num { font-size: 10px; }
+.pile { position: relative; }
+.pile small {
+  position: absolute; top: -6px; right: -6px; min-width: 19px; height: 19px; padding: 0 4px;
+  border-radius: 10px; background: var(--ink); border: 1px solid var(--dim); color: var(--bone);
+  font-size: 12px; line-height: 17px; text-align: center; font-variant-numeric: tabular-nums;
+}
 
 .card, .slot {
   position: relative; width: 100%; aspect-ratio: 10 / 13; border-radius: 5px; padding: 0;
@@ -156,13 +165,11 @@ details p { margin: .6em 0; }
   </section>
 
   <section class="zone">
-    <div class="zone-head"><h2>Realm</h2><span>your row is the bottom one</span></div>
-    <div class="realm-wrap" id="realm-wrap"><div class="realm" id="realm"></div></div>
-  </section>
-
-  <section class="zone">
-    <div class="zone-head"><h2>Reliquary</h2><span>face-up relics, and how many lie beneath</span></div>
-    <div class="slots" id="reliquary"></div>
+    <div class="zone-head"><h2>Reliquary and realm</h2><span>your row is the bottom one</span></div>
+    <div class="table">
+      <div class="rel" id="reliquary" aria-label="Reliquary"></div>
+      <div class="realm-wrap" id="realm-wrap"><div class="realm" id="realm"></div></div>
+    </div>
   </section>
 
   <section class="zone">
@@ -177,7 +184,7 @@ details p { margin: .6em 0; }
   <details>
     <summary>How to play</summary>
     <p>Ten noble houses each have four relics: a sword, a shield, a helmet and a chalice. Hold all four relics of one house at the end of your turn and you win.</p>
-    <p><b>Claim.</b> Take a face-up relic from the reliquary. You may hold only one of each kind, so if you now have two, send either one to the realm. It goes at the left or right end of a row, and a column must be full before the next one starts.</p>
+    <p><b>Claim.</b> Take a face-up relic from the reliquary, the column on the left. The number on each pile is how many relics lie beneath it. You may hold only one of each kind, so if you now have two, send either one to the realm. It goes at the left or right end of a row, and a column must be full before the next one starts.</p>
     <p><b>Plot.</b> If a relic on your row belongs to the same house as one you hold, you may plot with a diagonal rising from it. Pick up its three relics and put three back, in any order, from those and your own. You must still end with one of each kind.</p>
     <p>Your opponent sits opposite, so their row is the top one. You may also pass.</p>
   </details>
@@ -261,7 +268,7 @@ details p { margin: .6em 0; }
         if (G.mode === 'claim-place' && G.pick.t === t && G.pick.played === c) cls += ' sel';
         inner = cardHtml(c, attrs, cls);
       }
-      return `<div class="pile">${inner}<small>${c === NONE ? 'empty' : left + ' more'}</small></div>`;
+      return `<div class="pile">${inner}${c === NONE ? '' : `<small aria-label="${left} more beneath">${left}</small>`}</div>`;
     }).join('');
 
     renderRealm();
