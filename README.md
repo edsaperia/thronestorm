@@ -24,3 +24,19 @@ cd endgame && cargo build --release
 # positions, max depth, seed, all-different-house hands (0|1), quiet moves, houses...
 ./target/release/endgame 500 3 1 0 1 5 6 7 8 9 10
 ```
+
+## Trained player
+
+`trainer/` (Rust, no dependencies) trains a value network by self-play and
+plays it against baselines. Its rules are checked against the Python engine.
+
+```
+cd trainer && cargo build --release
+./target/release/trainer train 10 200000 ../nets/h10.bin          # houses, games, output
+./target/release/trainer train 10 200000 ../nets/h10.bin resume=../nets/h10-18k.bin
+./target/release/trainer eval 10 2000 ../nets/h10.bin greedy       # or random, or another net
+./target/release/trainer transcript 10 200 1 | PYTHONPATH=.. python ../tests/verify_rust.py
+```
+
+Options for `train`: `threads=`, `eps=` (exploration), `lambda=`, `lr=`, `seed=`.
+Set `NOPASS=1` to play the variant where passing is only allowed with no other move.
