@@ -53,7 +53,7 @@ button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--storm); outline-offset: 2px; }
 
 /* ----- the table ----- */
-.table { display: flex; gap: 10px; align-items: center; padding: 4px 12px; width: 100%; max-width: 1100px; margin: 0 auto; }
+.table { display: flex; gap: 10px; align-items: center; justify-content: center; padding: 4px 12px; width: 100%; max-width: 1100px; margin: 0 auto; }
 .rel { display: grid; gap: 6px; width: calc(var(--cw) + 20px); flex: none; padding-left: 20px; }
 .pile { position: relative; }
 /* the relics beneath each face-up one show as card edges running out to the left */
@@ -62,7 +62,7 @@ button { font: inherit; color: inherit; }
   background: repeating-linear-gradient(to left, #8a7f97 0 1px, #1b1622 1px 2px); border-radius: 3px 0 0 3px;
 }
 .board {
-  position: relative; flex: 1; min-width: 0; border-radius: 6px;
+  position: relative; flex: none; border-radius: 6px;
   background: var(--grain), radial-gradient(70% 60% at 50% 50%, #2c2338 0%, #17121d 100%);
   background-blend-mode: soft-light, normal;
   box-shadow: inset 0 0 30px rgba(0, 0, 0, .75), 0 0 0 1px var(--edge);
@@ -79,16 +79,6 @@ button { font: inherit; color: inherit; }
 .side .last { margin: 0; color: var(--dim); font-size: 14px; -webkit-user-select: text; user-select: text; }
 .side .grow { flex: 1; }
 .side .words { display: flex; flex-direction: column; gap: 8px; }
-/* when the realm is long, the words and buttons move to a strip under the table,
-   and the table takes the full width */
-.table.under { flex-wrap: wrap; row-gap: 2px; }
-.table.under .side { width: 100%; flex-direction: row; align-items: center; gap: 14px; padding: 0; min-height: 58px; }
-.table.under .side .words { flex: 1; gap: 1px; }
-.table.under .side .grow { display: none; }
-.table.under .side .prompt { font-size: 15px; line-height: 1.25; }
-.table.under .side .last { font-size: 13px; }
-.table.under .actions { flex-wrap: nowrap; }
-.actions { display: flex; gap: 6px; flex-wrap: wrap; }
 /* Always landscape: on a screen held upright the whole stage is turned on its
    side, so turning the phone shows the game the right way up. */
 body.rot { overflow: hidden; }
@@ -368,37 +358,32 @@ body.rot #stage { min-height: 0; }
     return n;
   }
 
-  let L = { cw: 40, ch: 62, g: 5, x0: 300, pitch: 70, rowTop: [6, 73, 140, 207, 274] };
+  let L = { cw: 40, ch: 62, g: 5, x0: 300, bw: 600, pitch: 70, rowTop: [6, 73, 140, 207, 274] };
   function layout() {
     const s = G.s, board = $('board');
-    let reach = 0;
-    for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) if (s.cells[TS.cid(r, x)] !== NONE) reach = Math.max(reach, Math.abs(x));
-    for (const [, x] of TS.openSlots(s)) reach = Math.max(reach, Math.abs(x));
-    reach = Math.max(4, Math.ceil(reach / 2) * 2); // the table grows in steps, so it rarely rescales
+    // how far the realm reaches to the left and right of its centre, in half-steps;
+    // each side grows in steps of two, so the table rarely rescales
+    let left = 0, right = 0;
+    const seen = (x) => { if (x < 0) left = Math.max(left, -x); else right = Math.max(right, x); };
+    for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) if (s.cells[TS.cid(r, x)] !== NONE) seen(x);
+    for (const [, x] of TS.openSlots(s)) seen(x);
+    left = Math.max(4, Math.ceil(left / 2) * 2); right = Math.max(4, Math.ceil(right / 2) * 2);
+    const span = (left + right) / 2; // pieces across, less one
     const g = SKIN.gap, k = SKIN.rowPitch, gh = SKIN.handGap;
-    const table = $('table'), wide = table.clientWidth - 24, high = tableHeight();
-    // five rows: hand, three realm rows (pitch k), hand. Words go beside the
-    // table or in a strip beneath it, whichever leaves the pieces larger.
-    const sizeFor = (sideWidth, stripHeight) => {
-      let w = 40;
-      for (let pass = 0; pass < 3; pass++) { // the pile column's width follows the piece size
-        const room = wide - (w + 20) - 10 - (sideWidth ? sideWidth + 10 : 0);
-        const byWidth = (room - 12 - reach * g) / (reach + 1);
-        const byHeight = ((high - 20 - stripHeight - 2 * k * g - 2 * gh) / (3 + 2 * k)) / SKIN.ratio;
-        w = Math.floor(Math.max(22, Math.min(SKIN.maxWidth, byWidth, byHeight)));
-      }
-      return w;
-    };
-    const beside = sizeFor(150, 0), beneath = sizeFor(0, 64);
-    const under = beneath > beside * 1.08;
-    table.classList.toggle('under', under);
-    const cw = under ? beneath : beside;
+    const wide = $('table').clientWidth - 24, high = tableHeight();
+    // across: piles (a piece + 20), the table (span + 1 pieces), the words (150), two gaps of 10
+    const byWidth = (wide - 20 - 20 - 150 - 12 - span * g) / (span + 2);
+    // down: five rows: hand, three realm rows (pitch k), hand
+    const byHeight = ((high - 20 - 2 * k * g - 2 * gh) / (3 + 2 * k)) / SKIN.ratio;
+    const cw = Math.floor(Math.max(22, Math.min(SKIN.maxWidth, byWidth, byHeight)));
     document.documentElement.style.setProperty('--cw', cw + 'px');
-    const bw = Math.max(200, board.clientWidth);
+    const bw = Math.ceil(span * (cw + g) + cw + 12);
+    board.style.width = bw + 'px';
+    const x0 = 6 + cw / 2 + left * (cw + g) / 2;
     const ch = Math.round(cw * SKIN.ratio);
     const realm = 6 + ch + gh, step = (ch + g) * k;
     const rowTop = [6, realm, realm + step, realm + 2 * step, realm + 2 * step + ch + gh];
-    L = { cw, ch, g, x0: bw / 2, pitch: Math.min(cw * SKIN.handPitch, (bw - cw) / 3.2), rowTop };
+    L = { cw, ch, g, x0, bw, pitch: Math.min(cw * SKIN.handPitch, (bw - cw) / 3.2), rowTop };
     board.style.height = rowTop[4] + ch + 6 + 'px';
   }
   const at = (row, left) => `style="left:${left.toFixed(1)}px;top:${L.rowTop[row].toFixed(1)}px"`;
@@ -407,13 +392,14 @@ body.rot #stage { min-height: 0; }
   // so each stays readable and easy to pick; the row closes up if space is short.
   function handRow(stacks) {
     const n = stacks.map((st) => Math.max(1, st.length));
-    const extra = n.reduce((a, b) => a + b - 1, 0), room = L.x0 * 2 - 12;
+    const extra = n.reduce((a, b) => a + b - 1, 0), room = L.bw - 12;
     let gap = L.pitch - L.cw, step = L.cw * 0.9;
     const width = () => 4 * L.cw + extra * step + 3 * gap;
     if (width() > room) gap = Math.max(4, (room - 4 * L.cw - extra * step) / 3);
     if (width() > room && extra) step = Math.max(L.cw * 0.3, (room - 4 * L.cw - 3 * gap) / extra);
     const starts = [];
-    let x = L.x0 - width() / 2;
+    // centred on the realm's centre where there is room, otherwise kept inside the table
+    let x = Math.max(6, Math.min(L.bw - 6 - width(), L.x0 - width() / 2));
     for (let t = 0; t < 4; t++) { starts.push(x); x += L.cw + (n[t] - 1) * step + gap; }
     return (t, i) => starts[t] + i * step;
   }
@@ -574,6 +560,13 @@ body.rot #stage { min-height: 0; }
   }
   function slide(old, was) {
     document.querySelectorAll('.ghost').forEach((g) => g.remove());
+    // relics just put down in the realm make rings: as they land, or at once if they do not fly
+    const wet = new Set(SKIN.ripple ? (G.splash || []).map(String) : []), flying = new Set();
+    G.splash = null;
+    setTimeout(() => wet.forEach((card) => {
+      const el = !flying.has(card) && document.querySelector(`#board [data-card="${card}"]`);
+      if (el && !calm) ripple(local(el.getBoundingClientRect()));
+    }), 0);
     if (calm || !old || !document.body.animate || was !== q) return; // no flights across a turn of the stage
     document.querySelectorAll('[data-card]').forEach((el) => {
       const seen = old[el.dataset.card];
@@ -591,7 +584,8 @@ body.rot #stage { min-height: 0; }
         [{ transform: 'none' }, { transform: `translate(${dx}px,${dy}px) scale(${to.width / from.width},${to.height / from.height})` }],
         { duration: pace, easing: 'cubic-bezier(.2,.7,.2,1)' });
       let landed = false;
-      const land = () => { if (landed) return; landed = true; g.remove(); el.style.visibility = ''; if (SKIN.ripple) ripple(to); };
+      const land = () => { if (landed) return; landed = true; g.remove(); el.style.visibility = ''; if (wet.has(el.dataset.card)) ripple(to); };
+      flying.add(el.dataset.card);
       fly.onfinish = land; fly.oncancel = land;
       setTimeout(land, pace + 80); // in case the animation never reports back, e.g. in a background tab
     });
@@ -649,14 +643,18 @@ body.rot #stage { min-height: 0; }
     G.last = describe(G.two ? 1 : who, before, hit.m, now);
     if (G.two && now.winner < 0) { was = turnRound(before); now = turnRound(now); G.turned = !G.turned; }
     const fr = {};
+    const splash = [];
     for (let x = now.lo; x <= now.hi; x++) for (let r = 0; r < 3; r++) {
-      if (now.cells[TS.cid(r, x)] !== was.cells[TS.cid(r, x)]) fr[key(r, x)] = 1;
+      const c = now.cells[TS.cid(r, x)];
+      if (c !== was.cells[TS.cid(r, x)]) { fr[key(r, x)] = 1; if (c !== NONE) splash.push(c); }
     }
     for (let t = 0; t < 4; t++) {
       if (now.hands[0][t] !== was.hands[0][t]) fr['m' + t] = 1;
       if (now.hands[1][t] !== was.hands[1][t]) fr['o' + t] = 1;
       if (TS.faceUp(now, t) !== TS.faceUp(was, t)) fr['d' + t] = 1;
     }
+    // relics already set down during a plot have had their rings
+    G.splash = (G.splash || []).concat(splash.filter((c) => !(G.plot && G.plot.placed.includes(c))));
     G.s = now; G.fresh = fr; G.stage = null; reset();
     if (G.tut && who === 0) G.tut.step++;
     if (now.winner >= 0) {
@@ -741,9 +739,11 @@ body.rot #stage { min-height: 0; }
           P.pool.splice(i, 1);
           if (P.placed[dst.i] !== NONE) P.pool.push(P.placed[dst.i]);
           P.placed[dst.i] = src.card;
+          G.splash = [src.card];
         }
       } else if (src.k === 'place' && dst.k === 'place') {
         [P.placed[src.i], P.placed[dst.i]] = [P.placed[dst.i], P.placed[src.i]];
+        G.splash = [P.placed[src.i], P.placed[dst.i]].filter((c) => c !== NONE);
       } else if (src.k === 'place' && dst.k === 'hand' && P.placed[src.i] !== NONE) {
         P.pool.push(P.placed[src.i]); P.placed[src.i] = NONE;
       }
