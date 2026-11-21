@@ -175,7 +175,11 @@ button.card, button.slot, [data-dst] { cursor: pointer; }
 .close[hidden] { display: none; }
 .won { font: 400 21px/1.2 var(--display); letter-spacing: .06em; color: var(--bone); }
 /* the rules, as a sheet over the game */
-.title-inner.sheet { display: block; max-width: 64ch; max-height: 100%; overflow: auto; color: var(--dim); -webkit-user-select: text; user-select: text; }
+#rules { overflow: hidden; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
+.title-inner.sheet { display: flex; flex-direction: column; width: 100%; max-width: 64ch; max-height: 100%; min-height: 0; justify-self: center; color: var(--dim); -webkit-user-select: text; user-select: text; }
+.sheet-body { min-height: 0; overflow-x: hidden; overflow-y: auto; overflow-wrap: break-word; overscroll-behavior: contain; }
+.sheet-body > :first-child { margin-top: 0; } .sheet-body > :last-child { margin-bottom: 0; }
+.close { top: -12px; right: -12px; }
 .title-inner.sheet p { max-width: none; margin: .6em 0; }
 /* the table sits in the middle of the screen */
 #stage { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; }
@@ -219,12 +223,14 @@ body.rot #stage { min-height: 0; }
 <section class="title" id="rules" hidden>
   <div class="title-inner sheet">
     <button class="close" id="rules-close" type="button" aria-label="Close the rules">&times;</button>
+    <div class="sheet-body">
     <h2>How to play</h2>
   <p>Ten noble houses (Cleric, Necromancer, Warrior, Paladin, Monk, Assassin, Wizard, Bard, Swashbuckler and Barbarian) each have four relics: a sword, a shield, a helmet and a trinket. A house's relics share a colour, and the small mark in the corner of each relic shows its kind. Hold all four relics of one house at the end of your turn and you win.</p>
   <p>The table has five rows. The top row is your opponent's relics, the bottom row is yours, and the three between are the realm. The reliquary is the column on the left; the card edges beside each pile are the relics still beneath it.</p>
   <p><b>Claim.</b> Drag a face-up relic from the reliquary to your row. You may keep only one of each kind, so if you now hold two, drag either one to a glowing place in the realm. A relic goes at the left or right end of a row, and a column must be full before the next one starts.</p>
   <p><b>Plot.</b> If a relic on the realm row nearest you belongs to the same house as one you hold, tap it to plot with a diagonal rising from it. Its three relics come up into your hand. Put three back, in any order, from everything you now hold; the plot is made when the third goes down. You must end with one of each kind. Put them back as they were to change your mind.</p>
   <p>Your opponent sits opposite, so their near row is the top row of the realm. You may also pass.</p>
+    </div>
   </div>
 </section>
 
@@ -1413,6 +1419,9 @@ window.SKIN = (function () {
   $('go-tutorial').addEventListener('click', () => { $('title').hidden = true; begun = true; tutorial(); });
   $('rules-close').addEventListener('click', () => { $('rules').hidden = true; });
   $('go-resume').addEventListener('click', () => { $('title').hidden = true; render(); });
+  // a touch outside a panel closes it, wherever closing is on offer
+  $('rules').addEventListener('click', (e) => { if (e.target === e.currentTarget) $('rules-close').click(); });
+  $('title').addEventListener('click', (e) => { if (e.target === e.currentTarget && !$('go-resume').hidden) $('go-resume').click(); });
   let resizing = 0;
   window.addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { fit(); if (G && !drag) draw(); }, 80); });
 
