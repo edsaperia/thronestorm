@@ -923,7 +923,7 @@ window.SKIN = (function () {
     desk = MOUSE && !rot && Wd >= 1000 && Ht >= 640;
     document.body.classList.toggle('desk', desk);
     q = rot ? 1 : 0;
-    document.body.classList.toggle('turned', far()); // only the words turn to face the far player
+    document.body.classList.toggle('turned', far() && !desk); // only the words turn to face the far player; at a desk both sit on one side
     document.body.classList.toggle('rot', q !== 0);
     st.width = q % 2 ? Ht + 'px' : q ? Wd + 'px' : '';
     st.height = q % 2 ? Wd + 'px' : q ? Ht + 'px' : '';

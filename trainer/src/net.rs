@@ -8,8 +8,15 @@ use crate::game::*;
 
 pub const F: usize = 27; // per-house features
 pub const G: usize = 20; // global features
+// The "big" build (cargo build --release --features big) is a network about three times the size.
+#[cfg(not(feature = "big"))]
 pub const D1: usize = 32;
+#[cfg(not(feature = "big"))]
 pub const D2: usize = 64;
+#[cfg(feature = "big")]
+pub const D1: usize = 64;
+#[cfg(feature = "big")]
+pub const D2: usize = 128;
 
 #[derive(Clone)]
 pub struct Feats {
