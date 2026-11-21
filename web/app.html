@@ -44,8 +44,8 @@ body {
 h2 { font: 400 14px/1 var(--display); letter-spacing: .16em; color: var(--dim); margin: 0; }
 button { font: inherit; color: inherit; }
 .btn {
-  background: rgba(255, 255, 255, .04); border: 1px solid var(--edge); border-radius: 3px;
-  padding: 7px 12px; cursor: pointer; font-weight: 500;
+  background: rgba(255, 255, 255, .04); border: 1px solid var(--edge); border-radius: 10px;
+  padding: 8px 12px; cursor: pointer; font-weight: 500;
 }
 .btn:hover { border-color: var(--dim); }
 .btn.primary { background: var(--storm); border-color: var(--storm); color: #10131c; font-weight: 700; }
@@ -78,6 +78,10 @@ button { font: inherit; color: inherit; }
 .side .prompt.warn { color: var(--warn); }
 .side .last { margin: 0; color: var(--dim); font-size: 14px; -webkit-user-select: text; user-select: text; }
 .side .grow { flex: 1; }
+/* the table's buttons: a grid of equal size */
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.actions .btn { width: 100%; min-height: 40px; padding: 6px 4px; }
+.actions .btn:only-child { grid-column: 1 / -1; }
 .side .words { display: flex; flex-direction: column; gap: 8px; }
 /* Always landscape: on a screen held upright the whole stage is turned on its
    side, so turning the phone shows the game the right way up. */
@@ -156,18 +160,21 @@ button.card, button.slot, [data-dst] { cursor: pointer; }
 .title-inner p { margin: 0; color: var(--dim); max-width: 34ch; }
 @media (max-width: 560px) and (orientation: landscape) { .title-inner { grid-template-columns: minmax(0, 300px); justify-content: center; } }
 @media (max-height: 430px) { .title-inner img { max-height: 78vh; width: auto; justify-self: end; } }
-.field { display: flex; flex-direction: column; gap: 6px; }
-.seg { display: flex; gap: 6px; flex-wrap: wrap; }
-.seg label { border: 1px solid var(--edge); border-radius: 3px; padding: 6px 12px; cursor: pointer; }
-.seg input { position: absolute; opacity: 0; }
-.seg input:checked + span { color: var(--storm); }
-.seg label:has(input:checked) { border-color: var(--storm); }
-.seg label:has(input:focus-visible) { outline: 2px solid var(--storm); outline-offset: 2px; }
+.title-inner { position: relative; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choices[hidden] { display: none; }
+.choices .btn { min-height: 44px; }
+#mode-choice #go-tutorial, #level-choice #level-back { grid-column: 1 / -1; }
+#level-choice { grid-template-columns: 1fr 1fr 1fr; }
+.close {
+  position: absolute; top: -14px; right: -14px; width: 38px; height: 38px; border-radius: 50%; padding: 0; z-index: 1;
+  background: var(--stone); border: 1px solid var(--edge); cursor: pointer; font-size: 22px; line-height: 1;
+}
+.close[hidden] { display: none; }
 .won { font: 400 21px/1.2 var(--display); letter-spacing: .06em; color: var(--bone); }
 /* the rules, as a sheet over the game */
 .title-inner.sheet { display: block; max-width: 64ch; max-height: 100%; overflow: auto; color: var(--dim); -webkit-user-select: text; user-select: text; }
 .title-inner.sheet p { max-width: none; margin: .6em 0; }
-.title-inner.sheet .actions { margin-top: 14px; }
 /* the table sits in the middle of the screen */
 #stage { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; }
 body.rot #stage { min-height: 0; }
@@ -185,22 +192,20 @@ body.rot #stage { min-height: 0; }
 <div id="stage">
 <section class="title" id="title">
   <div class="title-inner">
+    <button class="close" id="go-resume" type="button" aria-label="Back to the game" hidden>&times;</button>
     {{HERO}}
     <div class="controls">
       <p>{{TAGLINE}}</p>
-      <div class="field">
-        {{LEVEL_HEAD}}
-        <div class="seg">
-          <label><input type="radio" name="strength" id="st1" value="1"><span>{{S1}}</span></label>
-          <label><input type="radio" name="strength" id="st2" value="2"><span>{{S2}}</span></label>
-          <label><input type="radio" name="strength" id="st4" value="4" checked><span>{{S4}}</span></label>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn primary" id="go-play" type="button">Play</button>
-        <button class="btn" id="go-two" type="button">Two players</button>
+      <div class="choices" id="mode-choice">
+        <button class="btn primary" id="go-single" type="button">Single Player</button>
+        <button class="btn primary" id="go-two" type="button">Two Players</button>
         <button class="btn" id="go-tutorial" type="button">Tutorial</button>
-        <button class="btn" id="go-resume" type="button" hidden>Back to the game</button>
+      </div>
+      <div class="choices" id="level-choice" hidden>
+        <button class="btn primary" type="button" data-depth="1">{{S1}}</button>
+        <button class="btn primary" type="button" data-depth="2">{{S2}}</button>
+        <button class="btn primary" type="button" data-depth="4">{{S4}}</button>
+        <button class="btn" id="level-back" type="button">Back</button>
       </div>
     </div>
   </div>
@@ -208,9 +213,9 @@ body.rot #stage { min-height: 0; }
 
 <section class="title" id="rules" hidden>
   <div class="title-inner sheet">
+    <button class="close" id="rules-close" type="button" aria-label="Close the rules">&times;</button>
     <h2>How to play</h2>
 {{RULES}}
-    <div class="actions"><button class="btn primary" id="rules-close" type="button">Back to the game</button></div>
   </div>
 </section>
 
@@ -783,7 +788,12 @@ body.rot #stage { min-height: 0; }
   const srcOf = (el) => ({ k: el.dataset.src, t: +el.dataset.t, card: +el.dataset.card, i: +el.dataset.i });
   const dstOf = (el) => ({ k: el.dataset.dst, r: +el.dataset.r, x: +el.dataset.x, i: +el.dataset.i });
   const samePick = (src) => G.pick && G.pick.k === src.k && (src.k === 'hand' ? G.pick.card === src.card : G.pick.i === src.i);
-  function showTitle() { $('go-resume').hidden = !G || G.s.winner >= 0; $('title').hidden = false; }
+  let begun = false; // has a game been chosen yet? (a table is laid behind the start screen before that)
+  function showTitle() {
+    $('go-resume').hidden = !begun || !G || G.s.winner >= 0;
+    $('mode-choice').hidden = false; $('level-choice').hidden = true;
+    $('title').hidden = false;
+  }
 
   // ----- taps -----
 
@@ -893,12 +903,14 @@ body.rot #stage { min-height: 0; }
 
   // ----- title screen, resize, keeping a game across a republish -----
 
-  $('go-play').addEventListener('click', () => {
-    $('title').hidden = true;
-    deal(+document.querySelector('input[name=strength]:checked').value, false); // you always move first
-  });
-  $('go-two').addEventListener('click', () => { $('title').hidden = true; deal(4, true); });
-  $('go-tutorial').addEventListener('click', () => { $('title').hidden = true; tutorial(); });
+  $('go-single').addEventListener('click', () => { $('mode-choice').hidden = true; $('level-choice').hidden = false; });
+  $('level-back').addEventListener('click', () => { $('mode-choice').hidden = false; $('level-choice').hidden = true; });
+  document.querySelectorAll('[data-depth]').forEach((b) => b.addEventListener('click', () => {
+    $('title').hidden = true; begun = true;
+    deal(+b.dataset.depth, false); // you always move first
+  }));
+  $('go-two').addEventListener('click', () => { $('title').hidden = true; begun = true; deal(4, true); });
+  $('go-tutorial').addEventListener('click', () => { $('title').hidden = true; begun = true; tutorial(); });
   $('rules-close').addEventListener('click', () => { $('rules').hidden = true; });
   $('go-resume').addEventListener('click', () => { $('title').hidden = true; render(); });
   let resizing = 0;
@@ -916,7 +928,7 @@ body.rot #stage { min-height: 0; }
         s: { ...s, cells: Uint8Array.from(s.cells), hands: s.hands.map((h) => Uint8Array.from(h)) },
         depth: saved.depth, last: saved.last || '', tut: null, two: !!saved.two, turned: !!saved.turned,
       }, blank());
-      $('title').hidden = true;
+      $('title').hidden = true; begun = true;
       render();
       if (!G.two && G.s.winner < 0 && G.s.toMove === 1) opponentSoon();
     } else deal(4, false); // a table is laid behind the title screen, ready to play
