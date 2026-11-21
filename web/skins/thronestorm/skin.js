@@ -9,7 +9,7 @@ window.SKIN = (function () {
   const chips = (cs) => cs.map(chip).join(' ');
   return {
     kinds: KIND, houses: HOUSE, name, chip,
-    ratio: 14 / 9, maxWidth: 64, gap: 5, handGap: 5, rowPitch: 1,
+    ratio: 14 / 9, maxWidth: 72, gap: 5, handGap: 5, rowPitch: 1, handPitch: 1.5,
     badge: (c) => `<span class="kind">${glyph(kind(c))}</span>`,
     slot: glyph,
     pileStyle: () => '',

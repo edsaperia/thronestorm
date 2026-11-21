@@ -24,6 +24,7 @@ for skin in sorted((here / "skins").iterdir()):
     for key, value in {
         "{{TITLE}}": cfg["title"], "{{FONTS}}": fonts, "{{TAGLINE}}": cfg["tagline"],
         "{{S1}}": cfg["strength"][0], "{{S2}}": cfg["strength"][1], "{{S4}}": cfg["strength"][2],
+        "{{LEVEL_HEAD}}": ("<h2>%s</h2>" % cfg["level_head"]) if cfg.get("level_head") else "",
         "{{PILES}}": cfg["piles"], "{{TABLE}}": cfg["table"],
         "{{HERO}}": (skin / "hero.html").read_text().strip(),
         "{{RULES}}": (skin / "rules.html").read_text().rstrip(),

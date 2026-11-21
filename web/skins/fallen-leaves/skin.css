@@ -40,7 +40,7 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
   overflow: visible;
 }
 .card::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
+  content: ""; position: absolute; inset: -11%; pointer-events: none; /* a leaf may lap over its ring */
   background-image: url(leaves.webp); background-size: 1000% 400%;
   background-position: calc(var(--hx) * 11.1111%) calc(var(--ty) * 33.3333%);
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55));

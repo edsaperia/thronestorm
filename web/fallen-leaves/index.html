@@ -53,7 +53,7 @@ button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--storm); outline-offset: 2px; }
 
 /* ----- the table ----- */
-.table { display: flex; gap: 10px; align-items: center; padding: 8px 12px; width: 100%; max-width: 1100px; margin: 0 auto; }
+.table { display: flex; gap: 10px; align-items: center; padding: 4px 12px; width: 100%; max-width: 1100px; margin: 0 auto; }
 .rel { display: grid; gap: 6px; width: calc(var(--cw) + 20px); flex: none; padding-left: 20px; }
 .pile { position: relative; }
 /* the relics beneath each face-up one show as card edges running out to the left */
@@ -73,7 +73,7 @@ button { font: inherit; color: inherit; }
 .board svg.beams { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; mix-blend-mode: screen; }
 .beam { stroke: var(--storm); stroke-width: 6; stroke-linecap: round; opacity: .5; filter: drop-shadow(0 0 5px var(--storm)) drop-shadow(0 0 14px #fff); }
 .beam.dim { stroke: var(--dim); stroke-width: 3; stroke-dasharray: 3 9; opacity: .8; filter: none; }
-.side { width: 168px; flex: none; display: flex; flex-direction: column; gap: 8px; align-self: stretch; padding: 4px 0; }
+.side { width: 150px; flex: none; display: flex; flex-direction: column; gap: 8px; align-self: stretch; padding: 4px 0; }
 .side .prompt { margin: 0; text-wrap: balance; }
 .side .prompt.warn { color: var(--warn); }
 .side .last { margin: 0; color: var(--dim); font-size: 14px; -webkit-user-select: text; user-select: text; }
@@ -82,7 +82,7 @@ button { font: inherit; color: inherit; }
 /* Always landscape: on a screen held upright the whole stage is turned on its
    side, so turning the phone shows the game the right way up. */
 body.rot { overflow: hidden; }
-body.rot #stage { position: fixed; top: 0; transform-origin: 0 0; transform: rotate(90deg); overflow: auto; }
+body.rot #stage { position: fixed; overflow: auto; }
 
 /* ----- relics ----- */
 .card, .slot {
@@ -213,7 +213,7 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
   overflow: visible;
 }
 .card::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
+  content: ""; position: absolute; inset: -11%; pointer-events: none; /* a leaf may lap over its ring */
   background-image: url(leaves.webp); background-size: 1000% 400%;
   background-position: calc(var(--hx) * 11.1111%) calc(var(--ty) * 33.3333%);
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55));
@@ -264,9 +264,9 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
       </div>
     </div>
     <div class="controls">
-      <p>A game for two. Gather one kind of leaf in all four colours before your opponent does.</p>
+      <p>A game for two. Hold one kind of leaf in all four colours before your opponent does.</p>
       <div class="field">
-        <h2>Opponent</h2>
+        
         <div class="seg">
           <label><input type="radio" name="strength" id="st1" value="1"><span>Easy</span></label>
           <label><input type="radio" name="strength" id="st2" value="2"><span>Medium</span></label>
@@ -275,6 +275,7 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
       </div>
       <div class="actions">
         <button class="btn primary" id="go-play" type="button">Play</button>
+        <button class="btn" id="go-two" type="button">Two players</button>
         <button class="btn" id="go-tutorial" type="button">Tutorial</button>
         <button class="btn" id="go-resume" type="button" hidden>Back to the game</button>
       </div>
@@ -286,17 +287,17 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
   <div class="title-inner sheet">
     <h2>How to play</h2>
   <p>There are ten kinds of leaf (oak, chestnut, ginkgo, elm, willow, maple, aspen, hawthorn, ivy and ash), each in four colours: green, yellow, orange and red. Hold one kind of leaf in all four colours at the end of your turn and you win.</p>
-  <p>The table has five rows. The top row is your opponent's leaves, the bottom row is yours, and the three between are the ground. The piles are the column on the left, one for each colour; the rims beside each pile are the leaves still beneath it.</p>
-  <p><b>Gather.</b> Drag a face-up leaf from a pile to your row (or just tap it). You may keep only one leaf of each colour, so if you now hold two, drag either one to a glowing place on the ground. A leaf goes at the left or right end of a row, and a column must be full before the next one starts.</p>
-  <p><b>Sweep.</b> If a leaf on the ground row nearest you is the same kind as one you hold, tap it to sweep a diagonal rising from it. Its three leaves come up into your hand. Put three back, in any order, from everything you now hold; the sweep is made when the third goes down. You must end with one of each colour. Put them back as they were to change your mind.</p>
-  <p>Your opponent sits opposite, so their near row is the top row of the ground. You may also pass.</p>
+  <p>The table has five rows. The far row is your opponent's leaves, the near row is yours, and the three between are the middle. The piles are at the side, one for each colour; the rims beside each pile are the leaves still beneath it.</p>
+  <p><b>Pick.</b> Drag a face-up leaf from a pile to your row (or just tap it). You may keep only one leaf of each colour, so if you now hold two, drag either one to a glowing place in the middle. A leaf goes at the left or right end of a row, and a column must be full before the next one starts.</p>
+  <p><b>Match.</b> If a leaf on the row of the middle nearest you is the same kind as one you hold, tap it to match along a diagonal rising from it. Its three leaves come up into your hand. Put three back, in any order, from everything you now hold; the match is made when the third goes down. You must end with one of each colour. Put them back as they were to change your mind.</p>
+  <p>Your opponent sits opposite, so their near row is the far row of the middle. You may also pass.</p>
     <div class="actions"><button class="btn primary" id="rules-close" type="button">Back to the game</button></div>
   </div>
 </section>
 
 <main class="table" id="table">
   <div class="rel" id="reliquary" aria-label="Piles of leaves"></div>
-  <div class="board" id="board" aria-label="Opponent's leaves, the ground, and your leaves"></div>
+  <div class="board" id="board" aria-label="Opponent's leaves, the middle, and your leaves"></div>
   <aside class="side">
     <p class="prompt" id="prompt" aria-live="polite"></p>
     <p class="last" id="last"></p>
@@ -702,7 +703,8 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
 </script>
 <script>// Fallen Leaves: ten kinds of leaf, each in four colours. The same game as
 // Thronestorm; a leaf's kind plays the part of a house and its colour the
-// part of sword, shield, helmet or trinket.
+// part of sword, shield, helmet or trinket. You pick leaves from the piles
+// and make matches along diagonals in the middle.
 window.SKIN = (function () {
   const KIND = ['green', 'yellow', 'orange', 'red'];
   const HOUSE = ['oak', 'chestnut', 'ginkgo', 'elm', 'willow', 'maple', 'aspen', 'hawthorn', 'ivy', 'ash'];
@@ -712,15 +714,15 @@ window.SKIN = (function () {
   const chips = (cs) => cs.map(chip).join(' ');
   return {
     kinds: KIND, houses: HOUSE, name, chip,
-    ratio: 1, maxWidth: 76, gap: 4, handGap: 12, rowPitch: 0.866, // circles pack like a honeycomb
+    ratio: 1, maxWidth: 96, gap: 4, handGap: 8, rowPitch: 0.866, handPitch: 1.22, // circles pack like a honeycomb
     badge: () => '',
     slot: (t) => `<span class="dot k${t}"></span>`,
     // the leaves beneath a pile's top one show as rims running out to the left
     pileStyle: (n) => '--edges:' + (Array.from({ length: n }, (_, i) => `${-2 * (i + 1)}px 0 0 ${i % 2 ? 'rgba(10,18,22,.6)' : 'rgba(220,235,240,.45)'}`).join(',') || 'none'),
     words: {
       thinking: 'The opponent is thinking.',
-      yourTurn: 'Your turn. Drag a leaf from the piles to your row, or tap a glowing leaf on the ground to sweep.',
-      two: (t) => `You now hold two ${KIND[t]} leaves. Drag one of them to a glowing place on the ground.`,
+      yourTurn: 'Your turn. Pick a leaf from the piles by dragging it to your row, or tap a glowing leaf in the middle to match.',
+      two: (t) => `You now hold two ${KIND[t]} leaves. Drag one of them to a glowing place in the middle.`,
       twoDiagonals: 'Two diagonals rise from that leaf. Tap another leaf on the one you want.',
       putBack: (n) => `Put ${['', 'one more leaf', 'two more leaves', 'three leaves'][n]} back on the diagonal, keeping one of each colour. Tap a leaf twice to send it to the next place.`,
       wouldHoldTwo: (t) => `You would hold two ${KIND[t]} leaves. Swap one of them onto the diagonal.`,
@@ -729,39 +731,39 @@ window.SKIN = (function () {
       noKindYet: (t) => `You hold no ${KIND[t]} leaf yet, so that one goes to your row.`,
       peekNeither: 'Neither diagonal from that leaf is complete yet.',
       peekIncomplete: 'That diagonal is not complete yet.',
-      peekNoStake: (h) => `You hold no ${HOUSE[h]} leaf, so you cannot sweep from that one.`,
-      won: (me, h) => `${me ? 'You have' : 'The opponent has'} gathered the ${HOUSE[h]} in all four colours.`,
+      peekNoStake: (h) => `You hold no ${HOUSE[h]} leaf, so you cannot match from that one.`,
+      won: (me, h) => `${me ? 'You hold' : 'The opponent holds'} the ${HOUSE[h]} in all four colours.`,
       wholeGame: ' That is the whole game.',
       noKind: (t) => `no ${KIND[t]} leaf`,
-      emptyPlace: 'empty place on the ground',
+      emptyPlace: 'empty place in the middle',
       faceDown: 'face-down leaf',
       pile: (t, n) => `${KIND[t]} pile, ${n} beneath`,
       log: {
         pass: (Who) => `${Who} passed.`,
-        claim: (Who, c) => `${Who} gathered the ${chip(c)}.`,
-        sent: (Who, c) => `${Who} dropped the ${chip(c)} straight on the ground.`,
-        claimSent: (Who, c, p) => `${Who} gathered the ${chip(c)} and dropped the ${chip(p)} on the ground.`,
+        claim: (Who, c) => `${Who} picked the ${chip(c)}.`,
+        sent: (Who, c) => `${Who} put the ${chip(c)} straight into the middle.`,
+        claimSent: (Who, c, p) => `${Who} picked the ${chip(c)} and put the ${chip(p)} in the middle.`,
         rearranged: (Who) => `${Who} rearranged a diagonal.`,
-        plotted: (Who, took, left) => `${Who} swept a diagonal: took ${chips(took)}, left ${chips(left)}.`,
+        plotted: (Who, took, left) => `${Who} made a match: took ${chips(took)}, left ${chips(left)}.`,
       },
       hint: {
         pass: 'Hint: pass.',
-        claim: (c) => `Hint: gather the ${chip(c)}.`,
-        send: (c, where) => `Hint: drop the ${chip(c)} from the piles straight onto ${where}.`,
-        claimSend: (c, p, where) => `Hint: gather the ${chip(c)} and drop your ${chip(p)} on ${where}.`,
-        plot: (trig, a, b, c) => `Hint: sweep the diagonal from the ${chip(trig)}. Put back the ${chip(a)} nearest you, the ${chip(b)} in the middle and the ${chip(c)} farthest.`,
-        rows: ['the far row', 'the middle row', 'your row of the ground'],
+        claim: (c) => `Hint: pick the ${chip(c)}.`,
+        send: (c, where) => `Hint: put the ${chip(c)} from the piles straight onto ${where}.`,
+        claimSend: (c, p, where) => `Hint: pick the ${chip(c)} and put your ${chip(p)} on ${where}.`,
+        plot: (trig, a, b, c) => `Hint: match from the ${chip(trig)}. Put back the ${chip(a)} nearest you, the ${chip(b)} in the centre and the ${chip(c)} farthest.`,
+        rows: ['the far row', 'the centre row', 'the near row'],
         wins: ' It wins the game.',
         stops: ' It stops the opponent winning next turn.',
         noAnswer: ' It leaves the opponent no answer.',
       },
       tutorial: [
-        { idle: `You win by holding one kind of leaf in all four colours. You already hold the ${chip(25)}. Drag the ${chip(26)} from the piles to your row.`,
-          nope: `Take the ${chip(26)} first.` },
-        { idle: `You can keep only one leaf of each colour. Take the ${chip(24)} anyway.`,
+        { idle: `You win by holding one kind of leaf in all four colours. You already hold the ${chip(25)}. Pick the ${chip(26)}: drag it from the piles to your row.`,
+          nope: `Pick the ${chip(26)} first.` },
+        { idle: `You can keep only one leaf of each colour. Pick the ${chip(24)} anyway.`,
           claim: `Now you hold two green leaves. Drag the ${chip(28)} to the glowing place on the far row, on the right.`,
-          nope: `Take the ${chip(24)}, then drop the ${chip(28)} at the right-hand end of the far row.` },
-        { idle: `That filled a diagonal: one leaf on your row of the ground, one in the middle, one on the far row. The ${chip(27)} glows because you hold other aspen leaves. Tap it to sweep up the diagonal.`,
+          nope: `Pick the ${chip(24)}, then put the ${chip(28)} at the right-hand end of the far row.` },
+        { idle: `That filled a diagonal in the middle: one leaf on the near row, one in the centre, one on the far row. The ${chip(27)} glows because you hold other aspen leaves. Tap it to match.`,
           plot: 'The diagonal is in your hand. Put three leaves back, keeping the four aspen leaves.',
           nope: 'Keep all four aspen leaves, and put the other three back.' },
       ],
@@ -790,12 +792,10 @@ window.SKIN = (function () {
   const say = (text) => { G.note = text; G.warn = true; };
   const reset = () => { G.mode = 'idle'; G.pick = null; G.claim = null; G.plot = null; G.lines = null; G.beam = null; G.hint = null; };
 
-  function deal(depth, first) {
+  function deal(depth, two) {
     const s = TS.newState(10, Math.random);
-    s.toMove = first;
-    G = Object.assign({ s, depth, last: '', tut: null }, blank());
+    G = Object.assign({ s, depth, last: '', tut: null, two: !!two, turned: false }, blank());
     render();
-    if (first === 1) opponentSoon();
   }
 
   // ----- tutorial: a fixed position and three steps that end in a win -----
@@ -813,7 +813,7 @@ window.SKIN = (function () {
     s.dlen = s.decks.map((d) => d.length);
     s.hands[0].set([28, 25, NONE, 7]);
     s.hands[1].set([8, 13, NONE, NONE]);
-    G = Object.assign({ s, depth: 1, last: '', tut: { step: 0 } }, blank());
+    G = Object.assign({ s, depth: 1, last: '', tut: { step: 0 }, two: false, turned: false }, blank());
     render();
   }
 
@@ -853,30 +853,60 @@ window.SKIN = (function () {
 
   // ----- drawing -----
 
-  // On an upright screen the stage is turned a quarter; these convert between
-  // the screen's coordinates and the stage's own.
+  // The stage can be turned. On an upright screen it lies on its side, so the
+  // game is always landscape. In a two-player game it also turns half way round
+  // for the player sitting opposite. q counts quarter turns clockwise; local()
+  // converts a rectangle on the screen into the stage's own coordinates.
   const stage = $('stage');
-  let rot = false;
+  let rot = false, q = 0;
   function fit() {
-    rot = window.innerHeight > window.innerWidth;
-    document.body.classList.toggle('rot', rot);
-    stage.style.width = rot ? window.innerHeight + 'px' : '';
-    stage.style.height = rot ? window.innerWidth + 'px' : '';
-    stage.style.left = rot ? window.innerWidth + 'px' : '';
+    const Wd = window.innerWidth, Ht = window.innerHeight, st = stage.style;
+    rot = Ht > Wd;
+    q = (rot ? 1 : 0) + (G && G.turned ? 2 : 0);
+    document.body.classList.toggle('rot', q !== 0);
+    st.width = q % 2 ? Ht + 'px' : q ? Wd + 'px' : '';
+    st.height = q % 2 ? Wd + 'px' : q ? Ht + 'px' : '';
+    st.left = q === 1 ? Wd + 'px' : q ? '0px' : '';
+    st.top = q === 3 ? Ht + 'px' : q ? '0px' : '';
+    st.transformOrigin = q === 2 ? '50% 50%' : '0 0';
+    st.transform = q ? `rotate(${q * 90}deg)` : '';
   }
   const tableHeight = () => (rot ? window.innerWidth : window.innerHeight);
-  const local = (r) => (rot ? { left: r.top, top: window.innerWidth - r.right, width: r.height, height: r.width } : r);
+  function local(r) {
+    const Wd = window.innerWidth, Ht = window.innerHeight;
+    if (q === 1) return { left: r.top, top: Wd - r.right, width: r.height, height: r.width };
+    if (q === 2) return { left: Wd - r.right, top: Ht - r.bottom, width: r.width, height: r.height };
+    if (q === 3) return { left: Ht - r.bottom, top: r.left, width: r.height, height: r.width };
+    return r;
+  }
+  const localMove = (dx, dy) => [[dx, dy], [dy, -dx], [-dx, -dy], [-dy, dx]][q];
+
+  // Two players at one screen: after each move the position is turned round, so
+  // the player to move is always the one at the bottom of the stage.
+  function turnRound(s) {
+    const n = TS.clone(s);
+    n.cells.fill(NONE);
+    for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) {
+      const c = s.cells[TS.cid(r, x)];
+      if (c !== NONE) n.cells[TS.cid(2 - r, -x)] = c;
+    }
+    n.lo = -s.hi; n.hi = -s.lo;
+    n.hands = [s.hands[1].slice(), s.hands[0].slice()];
+    n.toMove = 1 - s.toMove;
+    n.winner = s.winner < 0 ? -1 : 1 - s.winner;
+    return n;
+  }
 
   let L = { cw: 40, ch: 62, g: 5, x0: 300, pitch: 70, rowTop: [6, 73, 140, 207, 274] };
   function layout() {
     const s = G.s, board = $('board');
-    let reach = 5;
+    let reach = 0;
     for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) if (s.cells[TS.cid(r, x)] !== NONE) reach = Math.max(reach, Math.abs(x));
     for (const [, x] of TS.openSlots(s)) reach = Math.max(reach, Math.abs(x));
-    reach = Math.ceil(reach / 3) * 3; // the table grows in steps, so it rarely rescales
+    reach = Math.max(4, Math.ceil(reach / 2) * 2); // the table grows in steps, so it rarely rescales
     const g = SKIN.gap, k = SKIN.rowPitch, gh = SKIN.handGap;
     // five rows: hand, three realm rows (pitch k), hand
-    const byHeight = ((tableHeight() - 48 - 2 * k * g - 2 * gh + 4 * 5) / (3 + 2 * k)) / SKIN.ratio;
+    const byHeight = ((tableHeight() - 40 - 2 * k * g - 2 * gh + 4 * 5) / (3 + 2 * k)) / SKIN.ratio;
     let bw, byWidth, cw;
     for (let pass = 0; pass < 2; pass++) { // twice: the pile column's width follows the card size
       bw = Math.max(200, board.clientWidth);
@@ -887,7 +917,7 @@ window.SKIN = (function () {
     const ch = Math.round(cw * SKIN.ratio);
     const realm = 6 + ch + gh, step = (ch + g) * k;
     const rowTop = [6, realm, realm + step, realm + 2 * step, realm + 2 * step + ch + gh];
-    L = { cw, ch, g, x0: bw / 2, pitch: Math.min(cw * 1.75, (bw - cw) / 3.6), rowTop };
+    L = { cw, ch, g, x0: bw / 2, pitch: Math.min(cw * SKIN.handPitch, (bw - cw) / 3.2), rowTop };
     board.style.height = rowTop[4] + ch + 6 + 'px';
   }
   const at = (row, left) => `style="left:${left.toFixed(1)}px;top:${L.rowTop[row].toFixed(1)}px"`;
@@ -1052,28 +1082,28 @@ window.SKIN = (function () {
     document.querySelectorAll('[data-card]').forEach((el) => { m[el.dataset.card] = el.getBoundingClientRect(); });
     return m;
   }
-  function ghostOf(el, rect) {
-    const r = local(rect), g = el.cloneNode(true);
+  function ghostOf(el, r) { // r is in the stage's own coordinates
+    const g = el.cloneNode(true);
     g.className = el.className.replace(/\b(fresh|can|sel|lit|hint)\b/g, '') + ' ghost';
     for (const a of ['data-card', 'data-src', 'data-dst', 'data-act']) g.removeAttribute(a);
     g.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;aspect-ratio:auto;margin:0;z-index:50;pointer-events:none;transform-origin:0 0`;
     stage.appendChild(g);
     return g;
   }
-  function slide(old) {
+  function slide(old, was) {
     document.querySelectorAll('.ghost').forEach((g) => g.remove());
-    if (calm || !old || !document.body.animate) return;
+    if (calm || !old || !document.body.animate || was !== q) return; // no flights across a turn of the stage
     document.querySelectorAll('[data-card]').forEach((el) => {
       const seen = old[el.dataset.card];
       if (!seen) {
         el.animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'none' }],
-          { duration: 280, delay: 220, fill: 'backwards', easing: 'ease-out' });
+          { duration: 320, easing: 'ease-out' }); // no delay or fill: if it never runs, the relic is simply there
         return;
       }
       const from = local(seen), to = local(el.getBoundingClientRect());
       const dx = to.left - from.left, dy = to.top - from.top;
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(to.width - from.width) < 1) return;
-      const g = ghostOf(el, seen);
+      const g = ghostOf(el, from);
       el.style.visibility = 'hidden';
       const fly = g.animate(
         [{ transform: 'none' }, { transform: `translate(${dx}px,${dy}px) scale(${to.width / from.width},${to.height / from.height})` }],
@@ -1084,10 +1114,11 @@ window.SKIN = (function () {
     });
   }
   function render() {
-    const old = Object.assign(places(), G.flyFrom || {});
+    const old = Object.assign(places(), G.flyFrom || {}), was = q;
     G.flyFrom = null;
+    fit();
     draw();
-    slide(old);
+    slide(old, was);
   }
 
   // ----- playing moves -----
@@ -1118,27 +1149,29 @@ window.SKIN = (function () {
   }
 
   function commit(before, hit, who) {
-    const after = hit.s;
-    TS.flip(after);
+    let was = before, now = hit.s;
+    TS.flip(now);
+    // each player reads the last move as the other's
+    G.last = describe(G.two ? 1 : who, before, hit.m, now);
+    if (G.two && now.winner < 0) { was = turnRound(before); now = turnRound(now); G.turned = !G.turned; }
     const fr = {};
-    for (let x = after.lo; x <= after.hi; x++) for (let r = 0; r < 3; r++) {
-      if (after.cells[TS.cid(r, x)] !== before.cells[TS.cid(r, x)]) fr[key(r, x)] = 1;
+    for (let x = now.lo; x <= now.hi; x++) for (let r = 0; r < 3; r++) {
+      if (now.cells[TS.cid(r, x)] !== was.cells[TS.cid(r, x)]) fr[key(r, x)] = 1;
     }
     for (let t = 0; t < 4; t++) {
-      if (after.hands[0][t] !== before.hands[0][t]) fr['m' + t] = 1;
-      if (after.hands[1][t] !== before.hands[1][t]) fr['o' + t] = 1;
-      if (TS.faceUp(after, t) !== TS.faceUp(before, t)) fr['d' + t] = 1;
+      if (now.hands[0][t] !== was.hands[0][t]) fr['m' + t] = 1;
+      if (now.hands[1][t] !== was.hands[1][t]) fr['o' + t] = 1;
+      if (TS.faceUp(now, t) !== TS.faceUp(was, t)) fr['d' + t] = 1;
     }
-    G.last = describe(who, before, hit.m, after);
-    G.s = after; G.fresh = fr; G.stage = null; reset();
+    G.s = now; G.fresh = fr; G.stage = null; reset();
     if (G.tut && who === 0) G.tut.step++;
-    if (after.winner >= 0) {
+    if (now.winner >= 0) {
       document.body.classList.remove('flash');
       void document.body.offsetWidth;
       document.body.classList.add('flash');
     }
     render();
-    if (after.winner < 0 && after.toMove === 1) opponentSoon();
+    if (!G.two && now.winner < 0 && now.toMove === 1) opponentSoon();
   }
 
   // The opponent moves in two steps where there are two: relics come up into
@@ -1337,14 +1370,15 @@ window.SKIN = (function () {
     if (!drag.ghost) {
       if (Math.hypot(dx, dy) < 7) return;
       const src = srcOf(drag.el);
-      drag.ghost = ghostOf(drag.el, drag.el.getBoundingClientRect());
+      drag.ghost = ghostOf(drag.el, local(drag.el.getBoundingClientRect()));
       drag.ghost.style.zIndex = 60;
       drag.el.style.opacity = '.25';
       drag.targets = [...document.querySelectorAll('[data-dst]')].filter((t) => t !== drag.el && legal(src, t.dataset.dst));
       drag.targets.forEach((t) => t.classList.add('target'));
       document.body.classList.add('dragging');
     }
-    drag.ghost.style.transform = rot ? `translate(${dy}px,${-dx}px) scale(1.08)` : `translate(${dx}px,${dy}px) scale(1.08)`;
+    const [lx, ly] = localMove(dx, dy);
+    drag.ghost.style.transform = `translate(${lx}px,${ly}px) scale(1.08)`;
     document.querySelectorAll('.over').forEach((el) => el.classList.remove('over'));
     const t = nearest(e.clientX, e.clientY);
     if (t && t.dataset.dst !== 'hand') t.classList.add('over');
@@ -1366,8 +1400,9 @@ window.SKIN = (function () {
 
   $('go-play').addEventListener('click', () => {
     $('title').hidden = true;
-    deal(+document.querySelector('input[name=strength]:checked').value, 0); // you always move first
+    deal(+document.querySelector('input[name=strength]:checked').value, false); // you always move first
   });
+  $('go-two').addEventListener('click', () => { $('title').hidden = true; deal(4, true); });
   $('go-tutorial').addEventListener('click', () => { $('title').hidden = true; tutorial(); });
   $('rules-close').addEventListener('click', () => { $('rules').hidden = true; });
   $('go-resume').addEventListener('click', () => { $('title').hidden = true; render(); });
@@ -1375,26 +1410,26 @@ window.SKIN = (function () {
   window.addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { fit(); if (G && !drag) draw(); }, 80); });
 
   const pack = () => (G && !G.tut ? {
-    v: 2, depth: G.depth, last: G.last,
+    v: 3, depth: G.depth, last: G.last, two: G.two, turned: G.turned,
     s: { ...G.s, cells: Array.from(G.s.cells), hands: G.s.hands.map((h) => Array.from(h)) },
   } : {});
   function start(saved) {
     fit();
-    if (saved && saved.v === 2 && saved.s) {
+    if (saved && saved.v === 3 && saved.s) {
       const s = saved.s;
       G = Object.assign({
         s: { ...s, cells: Uint8Array.from(s.cells), hands: s.hands.map((h) => Uint8Array.from(h)) },
-        depth: saved.depth, last: saved.last || '', tut: null,
+        depth: saved.depth, last: saved.last || '', tut: null, two: !!saved.two, turned: !!saved.turned,
       }, blank());
       $('title').hidden = true;
       render();
-      if (G.s.winner < 0 && G.s.toMove === 1) opponentSoon();
-    } else deal(4, 0); // a table is laid behind the title screen, ready to play
+      if (!G.two && G.s.winner < 0 && G.s.toMove === 1) opponentSoon();
+    } else deal(4, false); // a table is laid behind the title screen, ready to play
   }
   const hot = window.claude && window.claude.hot;
   if (hot && hot.snapshot) hot.snapshot(pack);
   if (hot && hot.ready) hot.ready(start); else start(hot && hot.data);
-  window.__ts = { get G() { return G; }, tutorial };
+  window.__ts = { get G() { return G; }, tutorial, turnRound };
 })();
 </script>
 </body>
