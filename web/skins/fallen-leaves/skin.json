@@ -3,8 +3,14 @@
   "title": "Fallen Leaves",
   "fonts": "Alegreya+Sans:wght@400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500",
   "tagline": "A game for two. Gather one kind of leaf in all four colours before your opponent does.",
-  "strength": ["Breeze", "Gust", "Gale"],
+  "strength": [
+    "Easy",
+    "Medium",
+    "Hard"
+  ],
   "piles": "Piles of leaves",
   "table": "Opponent's leaves, the ground, and your leaves",
-  "assets": ["leaves.jpg"]
+  "assets": [
+    "leaves.jpg"
+  ]
 }
