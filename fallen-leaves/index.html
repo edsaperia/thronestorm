@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Fallen Leaves</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -124,6 +124,8 @@ body.turned .side, body.turned .title-inner { transform: rotate(180deg); }
 .chip { display: inline-block; padding: 0 5px; border-radius: 3px; background: var(--h); color: var(--g); font-weight: 500; white-space: nowrap; }
 
 /* ----- light: what is live glows, the rest falls back ----- */
+/* fingers may scroll but never zoom: no pinch, no double tap */
+html, body { touch-action: pan-x pan-y; }
 [data-src] { touch-action: none; cursor: grab; }
 button.card, button.slot, [data-dst] { cursor: pointer; }
 .can { filter: drop-shadow(0 0 4px var(--storm)) drop-shadow(0 0 11px rgba(var(--glow), .75)); transform: translateY(-2px); animation: breathe 2.6s ease-in-out infinite; }
@@ -1562,6 +1564,9 @@ window.SKIN = (function () {
   const hot = window.claude && window.claude.hot;
   if (hot && hot.snapshot) hot.snapshot(pack);
   if (hot && hot.ready) hot.ready(start); else start(hot && hot.data);
+  // Safari ignores the page's request not to zoom, so refuse the gestures themselves
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
   window.__ts = { get G() { return G; }, tutorial, turnRound, move, play };
 })();
 </script>
