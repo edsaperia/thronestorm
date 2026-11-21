@@ -13,6 +13,7 @@ window.SKIN = (function () {
     kinds: KIND, houses: HOUSE, name, chip,
     ratio: 1, maxWidth: 96, gap: 4, handGap: 8, rowPitch: 0.866, handPitch: 1.22, // circles pack like a honeycomb
     ripple: true,
+    spin: true, // leaves lie at whatever angle they landed
     badge: () => '',
     slot: (t) => `<span class="dot k${t}"></span>`,
     // the leaves beneath a pile's top one show as rims running out to the left

@@ -720,7 +720,8 @@ window.SKIN = (function () {
   //         plot-pick (choosing between two diagonals) | plot (diagonal picked up)
   // G.stage: the opponent part-way through a move, for showing it in two steps
   let G = null;
-  const blank = () => ({ mode: 'idle', pick: null, claim: null, plot: null, lines: null, stage: null, beam: null, hint: null,
+  const blank = () => ({ angle: Array.from({ length: 48 }, () => Math.floor(Math.random() * 360)), where: {}, turnedFrom: {},
+    mode: 'idle', pick: null, claim: null, plot: null, lines: null, stage: null, beam: null, hint: null,
     fresh: {}, note: '', warn: false, flyFrom: null });
   const myTurn = () => G.s.toMove === 0 && G.s.winner < 0 && !G.stage;
   const say = (text) => { G.note = text; G.warn = true; };
@@ -868,6 +869,7 @@ window.SKIN = (function () {
   // the mover's side of the position is drawn at the bottom, or at the top for the far player
   const cellPos = (r, x) => (far() ? at(3 - r, L.x0 - x * (L.cw + L.g) / 2 - L.cw / 2) : at(r + 1, L.x0 + x * (L.cw + L.g) / 2 - L.cw / 2));
   const myRow = () => (far() ? 0 : 4), oppRow = () => (far() ? 4 : 0);
+  const spot = (r, x) => (far() ? key(2 - r, -x) : key(r, x)); // a place in the realm, as it lies on the screen
   // Where the relics of a hand sit. Relics of one kind overlap by only a tenth,
   // so each stays readable and easy to pick; the row closes up if space is short.
   function handRow(stacks) {
@@ -884,10 +886,10 @@ window.SKIN = (function () {
     return (t, i) => starts[t] + i * step;
   }
 
-  function cardHtml(c, attrs, cls) {
+  function cardHtml(c, attrs, cls, where) {
     const live = attrs && /data-(src|dst|act)/.test(attrs);
     const tag = live ? 'button' : 'div';
-    return `<${tag}${live ? ' type="button"' : ''} class="card h${house(c)} t${ctype(c)} ${cls || ''}" data-card="${c}" ${attrs || ''} aria-label="${nameOf(c)}">${SKIN.badge(c)}</${tag}>`;
+    return `<${tag}${live ? ' type="button"' : ''} class="card h${house(c)} t${ctype(c)} ${cls || ''}" data-card="${c}" data-at="${where}" ${attrs || ''} aria-label="${nameOf(c)}">${SKIN.badge(c)}</${tag}>`;
   }
   function slotHtml(t, attrs, cls) {
     const live = attrs && /data-(src|dst|act)/.test(attrs);
@@ -914,7 +916,7 @@ window.SKIN = (function () {
         const live = myTurn() && G.mode === 'idle';
         let cls = (G.fresh['d' + t] ? 'fresh' : '') + (live ? ' can' : '');
         if (H && H.m[0] === 'claim' && H.m[1] === t) cls += ' hint';
-        inner = cardHtml(c, live ? `data-src="deck" data-t="${t}"` : null, cls);
+        inner = cardHtml(c, live ? `data-src="deck" data-t="${t}"` : null, cls, 'pile' + t);
       }
       return `<div class="pile" style="--k:${beneath};${SKIN.pileStyle(beneath)}" aria-label="${W.pile(t, beneath)}">${inner}</div>`;
     }).join('');
@@ -926,7 +928,7 @@ window.SKIN = (function () {
     const oppLeft = handRow(V.opp), meLeft = handRow(V.me);
     for (let t = 0; t < 4; t++) {
       if (!V.opp[t].length) html += slotHtml(t, at(oppRow(), oppLeft(t, 0)));
-      V.opp[t].forEach((c, i) => { html += cardHtml(c, at(oppRow(), oppLeft(t, i)), (G.fresh['o' + t] ? 'fresh' : '') + (G.stage ? ' lit' : '')); });
+      V.opp[t].forEach((c, i) => { html += cardHtml(c, at(oppRow(), oppLeft(t, i)), (G.fresh['o' + t] ? 'fresh' : '') + (G.stage ? ' lit' : ''), 'hand' + oppRow()); });
       if (!V.me[t].length) html += slotHtml(t, at(myRow(), meLeft(t, 0)));
       V.me[t].forEach((c, i) => {
         let cls = G.fresh['m' + t] ? 'fresh' : '', attrs = '';
@@ -935,7 +937,7 @@ window.SKIN = (function () {
           cls += picked('hand', c) ? ' sel' : G.mode === 'claim' ? ' can' : ' lit';
         }
         if (H && H.m[0] === 'claim' && H.m[2] === c) cls += ' hint';
-        html += cardHtml(c, attrs + at(myRow(), meLeft(t, i)), cls);
+        html += cardHtml(c, attrs + at(myRow(), meLeft(t, i)), cls, 'hand' + myRow());
       });
     }
 
@@ -949,7 +951,7 @@ window.SKIN = (function () {
       const k = key(r, x);
       if (k in V.put) {
         const i = V.put[k];
-        html += cardHtml(G.plot.placed[i], `data-src="place" data-dst="place" data-i="${i}" ${cellPos(r, x)}`, picked('place', i) ? 'sel' : 'lit');
+        html += cardHtml(G.plot.placed[i], `data-src="place" data-dst="place" data-i="${i}" ${cellPos(r, x)}`, picked('place', i) ? 'sel' : 'lit', spot(r, x));
         continue;
       }
       if (k in V.hole) {
@@ -966,7 +968,7 @@ window.SKIN = (function () {
       } else if (k in choice) { attrs = `data-act="line" data-li="${choice[k]}" `; cls += ' can'; }
       else if (G.mode === 'plot-pick' && r === 2 && x === G.lines.x) cls += ' sel';
       if (H && H.m[0] === 'plot' && H.m[1].some(([hr, hx]) => hr === r && hx === x)) cls += ' hint';
-      html += cardHtml(c, attrs + cellPos(r, x), cls);
+      html += cardHtml(c, attrs + cellPos(r, x), cls, spot(r, x));
     }
     if (myTurn() && (G.mode === 'idle' || G.mode === 'claim')) {
       for (const [r, x] of open) {
@@ -989,6 +991,15 @@ window.SKIN = (function () {
     if (H && H.m[0] === 'plot') addBeam(H.m[1]);
     html += `<svg class="beams" aria-hidden="true">${beams.join('')}</svg>`;
     $('board').innerHTML = html;
+    if (SKIN.spin) {
+      // no leaf has a right way up: each lies at the angle it landed at, until it is moved again
+      document.querySelectorAll('[data-card][data-at]').forEach((el) => {
+        const c = el.dataset.card, at = el.dataset.at;
+        if (G.where[c] !== undefined && G.where[c] !== at) { G.turnedFrom[c] = G.angle[c]; G.angle[c] = Math.floor(Math.random() * 360); }
+        G.where[c] = at;
+        el.style.setProperty('--turn', G.angle[c] + 'deg');
+      });
+    }
 
     // words and buttons
     let text = G.note, buttons = '';
@@ -1031,10 +1042,11 @@ window.SKIN = (function () {
     return m;
   }
   function ghostOf(el, r) { // r is in the stage's own coordinates
-    const g = el.cloneNode(true);
+    const g = el.cloneNode(true), turn = el.style.getPropertyValue('--turn');
     g.className = el.className.replace(/\b(fresh|can|sel|lit|hint)\b/g, '') + ' ghost';
     for (const a of ['data-card', 'data-src', 'data-dst', 'data-act']) g.removeAttribute(a);
     g.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;aspect-ratio:auto;margin:0;z-index:50;pointer-events:none;transform-origin:0 0`;
+    if (turn) g.style.setProperty('--turn', turn);
     stage.appendChild(g);
     return g;
   }
@@ -1063,6 +1075,13 @@ window.SKIN = (function () {
       const fly = g.animate(
         [{ transform: 'none' }, { transform: `translate(${dx}px,${dy}px) scale(${to.width / from.width},${to.height / from.height})` }],
         { duration: pace, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      const c = el.dataset.card;
+      if (c in G.turnedFrom) {
+        try {
+          g.animate([{ transform: `rotate(${G.turnedFrom[c]}deg)` }, { transform: `rotate(${G.angle[c]}deg)` }],
+            { duration: pace, easing: 'ease-out', pseudoElement: '::after' });
+        } catch (e) { /* the leaf simply arrives at its new angle */ }
+      }
       let landed = false;
       const land = () => { if (landed) return; landed = true; g.remove(); el.style.visibility = ''; if (wet.has(el.dataset.card)) ripple(to); };
       flying.add(el.dataset.card);
@@ -1086,6 +1105,7 @@ window.SKIN = (function () {
     fit();
     draw();
     slide(old, was);
+    G.turnedFrom = {};
     pace = 400;
   }
 

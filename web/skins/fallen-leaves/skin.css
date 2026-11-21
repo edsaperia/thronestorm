@@ -44,6 +44,7 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
   background-image: url(leaves.webp); background-size: 1000% 400%;
   background-position: calc(var(--hx) * 11.1111%) calc(var(--ty) * 33.3333%);
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55));
+  transform: rotate(var(--turn, 0deg)); /* no leaf has a right way up */
 }
 .card.back { background: radial-gradient(circle at 36% 28%, rgba(255, 255, 255, .35), var(--tint)); }
 .card.back::after { display: none; }
@@ -78,3 +79,4 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
 }
 @keyframes ripple { 0% { transform: scale(.75); opacity: .75; } 100% { transform: scale(2.7); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ripple { display: none; } }
+.hero-row .card:nth-child(1) { --turn: -24deg; } .hero-row .card:nth-child(2) { --turn: 31deg; } .hero-row .card:nth-child(3) { --turn: -8deg; } .hero-row .card:nth-child(4) { --turn: 52deg; }
