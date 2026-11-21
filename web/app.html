@@ -116,7 +116,8 @@ body.dragging #me { box-shadow: inset 0 0 0 1px var(--edge); }
 .realm { position: relative; margin: 0 auto; }
 .realm > * { position: absolute; width: var(--cw); }
 
-/* houses in the order of the printed deck; --h and --g colour the log chips */
+/* houses in the order of the printed deck: Cleric, Necromancer, Warrior, Paladin, Monk,
+   Rogue, Wizard, Bard, Swashbuckler, Barbarian; --h and --g colour the log chips */
 .h0 { --hx: 0; --h: #c98a2b; --g: #17130a; } .h1 { --hx: 1; --h: #3a3b3d; --g: #fff; }
 .h2 { --hx: 2; --h: #b3283a; --g: #fff; }    .h3 { --hx: 3; --h: #5d3f86; --g: #fff; }
 .h4 { --hx: 4; --h: #a04a35; --g: #fff; }    .h5 { --hx: 5; --h: #2f4a80; --g: #fff; }
@@ -210,7 +211,7 @@ details p { margin: .6em 0; }
 
   <details>
     <summary>How to play</summary>
-    <p>Ten noble houses each have four relics: a sword, a shield, a helmet and a chalice. A house's relics share a colour, and the small mark in the corner of each relic shows its kind. Hold all four relics of one house at the end of your turn and you win.</p>
+    <p>Ten noble houses (Cleric, Necromancer, Warrior, Paladin, Monk, Rogue, Wizard, Bard, Swashbuckler and Barbarian) each have four relics: a sword, a shield, a helmet and a chalice. A house's relics share a colour, and the small mark in the corner of each relic shows its kind. Hold all four relics of one house at the end of your turn and you win.</p>
     <p><b>Claim.</b> Drag a face-up relic from the reliquary, the column on the left, to your relics (or just tap it). The card edges beside each pile are the relics still beneath it. You may keep only one of each kind, so if you now hold two, drag either one to a glowing place in the realm. A relic goes at the left or right end of a row, and a column must be full before the next one starts.</p>
     <p><b>Plot.</b> If a relic on your row belongs to the same house as one you hold, tap it to plot with a diagonal rising from it. Its three relics come up into your hand. Put three back, in any order, from everything you now hold. You must still end with one of each kind.</p>
     <p>Your opponent sits opposite, so their row is the top one. You may also pass.</p>
@@ -223,12 +224,12 @@ details p { margin: .6em 0; }
   'use strict';
   const NONE = TS.NONE, house = TS.house, ctype = TS.ctype;
   const KIND = ['sword', 'shield', 'helmet', 'chalice'];
-  const HOUSE = ['Gold', 'Black', 'Red', 'Purple', 'Copper', 'Navy', 'Azure', 'Forest', 'Jade', 'Silver'];
+  const HOUSE = ['Cleric', 'Necromancer', 'Warrior', 'Paladin', 'Monk', 'Rogue', 'Wizard', 'Bard', 'Swashbuckler', 'Barbarian'];
   const NET = TS.loadNet(Uint8Array.from(atob('WEIGHTS'), (c) => c.charCodeAt(0)));
   const $ = (id) => document.getElementById(id);
   const key = (r, x) => r + ',' + x;
-  const nameOf = (c) => `${HOUSE[house(c)]} ${KIND[ctype(c)]}`;
-  const chip = (c) => `<span class="chip h${house(c)}">${HOUSE[house(c)]} ${KIND[ctype(c)]}</span>`;
+  const nameOf = (c) => `${HOUSE[house(c)]}'s ${KIND[ctype(c)]}`;
+  const chip = (c) => `<span class="chip h${house(c)}">${HOUSE[house(c)]}'s ${KIND[ctype(c)]}</span>`;
   const glyph = (t) => `<svg aria-hidden="true"><use href="#g${t}"/></svg>`;
 
   // G.mode: idle | claim (holding two of a kind, one must go to the realm) |
@@ -473,7 +474,7 @@ details p { margin: .6em 0; }
     G.s = after; G.fresh = fr; reset();
     if (after.winner >= 0) {
       const h = HOUSE[house(after.hands[after.winner][0])];
-      $('banner-text').textContent = after.winner === 0 ? `You have united the ${h} house.` : `The opponent has united the ${h} house.`;
+      $('banner-text').textContent = after.winner === 0 ? `You have united the house of the ${h}.` : `The opponent has united the house of the ${h}.`;
       $('banner').hidden = false;
       document.body.classList.remove('flash');
       void document.body.offsetWidth;
