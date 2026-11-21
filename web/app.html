@@ -78,6 +78,16 @@ button { font: inherit; color: inherit; }
 .side .prompt.warn { color: var(--warn); }
 .side .last { margin: 0; color: var(--dim); font-size: 14px; -webkit-user-select: text; user-select: text; }
 .side .grow { flex: 1; }
+.side .words { display: flex; flex-direction: column; gap: 8px; }
+/* when the realm is long, the words and buttons move to a strip under the table,
+   and the table takes the full width */
+.table.under { flex-wrap: wrap; row-gap: 2px; }
+.table.under .side { width: 100%; flex-direction: row; align-items: center; gap: 14px; padding: 0; min-height: 58px; }
+.table.under .side .words { flex: 1; gap: 1px; }
+.table.under .side .grow { display: none; }
+.table.under .side .prompt { font-size: 15px; line-height: 1.25; }
+.table.under .side .last { font-size: 13px; }
+.table.under .actions { flex-wrap: nowrap; }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 /* Always landscape: on a screen held upright the whole stage is turned on its
    side, so turning the phone shows the game the right way up. */
@@ -214,12 +224,15 @@ body.rot #stage { min-height: 0; }
   </div>
 </section>
 
+<div id="ripples" aria-hidden="true"></div>
 <main class="table" id="table">
   <div class="rel" id="reliquary" aria-label="{{PILES}}"></div>
   <div class="board" id="board" aria-label="{{TABLE}}"></div>
   <aside class="side">
-    <p class="prompt" id="prompt" aria-live="polite"></p>
-    <p class="last" id="last"></p>
+    <div class="words">
+      <p class="prompt" id="prompt" aria-live="polite"></p>
+      <p class="last" id="last"></p>
+    </div>
     <div class="grow"></div>
     <div class="actions" id="actions"></div>
   </aside>
@@ -363,15 +376,25 @@ body.rot #stage { min-height: 0; }
     for (const [, x] of TS.openSlots(s)) reach = Math.max(reach, Math.abs(x));
     reach = Math.max(4, Math.ceil(reach / 2) * 2); // the table grows in steps, so it rarely rescales
     const g = SKIN.gap, k = SKIN.rowPitch, gh = SKIN.handGap;
-    // five rows: hand, three realm rows (pitch k), hand
-    const byHeight = ((tableHeight() - 40 - 2 * k * g - 2 * gh + 4 * 5) / (3 + 2 * k)) / SKIN.ratio;
-    let bw, byWidth, cw;
-    for (let pass = 0; pass < 2; pass++) { // twice: the pile column's width follows the card size
-      bw = Math.max(200, board.clientWidth);
-      byWidth = (bw - 12 - reach * g) / (reach + 1);
-      cw = Math.floor(Math.max(22, Math.min(SKIN.maxWidth, byWidth, byHeight)));
-      document.documentElement.style.setProperty('--cw', cw + 'px');
-    }
+    const table = $('table'), wide = table.clientWidth - 24, high = tableHeight();
+    // five rows: hand, three realm rows (pitch k), hand. Words go beside the
+    // table or in a strip beneath it, whichever leaves the pieces larger.
+    const sizeFor = (sideWidth, stripHeight) => {
+      let w = 40;
+      for (let pass = 0; pass < 3; pass++) { // the pile column's width follows the piece size
+        const room = wide - (w + 20) - 10 - (sideWidth ? sideWidth + 10 : 0);
+        const byWidth = (room - 12 - reach * g) / (reach + 1);
+        const byHeight = ((high - 20 - stripHeight - 2 * k * g - 2 * gh) / (3 + 2 * k)) / SKIN.ratio;
+        w = Math.floor(Math.max(22, Math.min(SKIN.maxWidth, byWidth, byHeight)));
+      }
+      return w;
+    };
+    const beside = sizeFor(150, 0), beneath = sizeFor(0, 64);
+    const under = beneath > beside * 1.08;
+    table.classList.toggle('under', under);
+    const cw = under ? beneath : beside;
+    document.documentElement.style.setProperty('--cw', cw + 'px');
+    const bw = Math.max(200, board.clientWidth);
     const ch = Math.round(cw * SKIN.ratio);
     const realm = 6 + ch + gh, step = (ch + g) * k;
     const rowTop = [6, realm, realm + step, realm + 2 * step, realm + 2 * step + ch + gh];
@@ -534,6 +557,7 @@ body.rot #stage { min-height: 0; }
   // Every relic is unique, so after each redraw a relic that has moved is
   // flown from where it was to where it is now.
 
+  let pace = 400; // milliseconds for a relic to fly; slower for the opponent's moves
   const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function places() {
     const m = {};
@@ -565,11 +589,22 @@ body.rot #stage { min-height: 0; }
       el.style.visibility = 'hidden';
       const fly = g.animate(
         [{ transform: 'none' }, { transform: `translate(${dx}px,${dy}px) scale(${to.width / from.width},${to.height / from.height})` }],
-        { duration: 400, easing: 'cubic-bezier(.2,.7,.2,1)' });
-      const land = () => { g.remove(); el.style.visibility = ''; };
+        { duration: pace, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      let landed = false;
+      const land = () => { if (landed) return; landed = true; g.remove(); el.style.visibility = ''; if (SKIN.ripple) ripple(to); };
       fly.onfinish = land; fly.oncancel = land;
-      setTimeout(land, 480); // in case the animation never reports back, e.g. in a background tab
+      setTimeout(land, pace + 80); // in case the animation never reports back, e.g. in a background tab
     });
+  }
+  // rings spreading on the water where something has just come down
+  function ripple(r) {
+    for (let i = 0; i < 3; i++) {
+      const ring = document.createElement('div');
+      ring.className = 'ripple';
+      ring.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;animation-delay:${i * 0.22}s`;
+      $('ripples').appendChild(ring);
+      setTimeout(() => ring.remove(), 2200 + i * 220);
+    }
   }
   function render() {
     const old = Object.assign(places(), G.flyFrom || {}), was = q;
@@ -577,6 +612,7 @@ body.rot #stage { min-height: 0; }
     fit();
     draw();
     slide(old, was);
+    pace = 400;
   }
 
   // ----- playing moves -----
@@ -651,11 +687,12 @@ body.rot #stage { min-height: 0; }
         for (const [r, x] of m[1]) { const c = s.cells[TS.cid(r, x)]; stacks[ctype(c)].push(c); }
         stage = { stacks, lifted: -1, holes: m[1].map(([r, x]) => key(r, x)) };
       }
+      pace = 900;
       if (!stage) return commit(s, hit, 1);
       G.stage = stage;
       render();
-      setTimeout(() => { if (G.s === s) commit(s, hit, 1); }, 900);
-    }, 550);
+      setTimeout(() => { if (G.s === s) { pace = 900; commit(s, hit, 1); } }, 1700);
+    }, 700);
   }
 
   // Pick up a diagonal: its three relics join my hand and must be replaced.
@@ -788,7 +825,7 @@ body.rot #stage { min-height: 0; }
       return move(G.pick, dstOf(dstEl));
     }
     if (!src) return;
-    if (src.k === 'deck') return move(src, { k: 'hand' });
+    if (src.k === 'deck') { G.note = W.dragToPick; return render(); } // a pick is a drag, never a tap
     if (samePick(src) && src.k === 'hand' && G.mode === 'plot') {
       // tapped twice: send it to the next empty place on the diagonal
       const i = G.plot.placed.indexOf(NONE);
@@ -887,7 +924,7 @@ body.rot #stage { min-height: 0; }
   const hot = window.claude && window.claude.hot;
   if (hot && hot.snapshot) hot.snapshot(pack);
   if (hot && hot.ready) hot.ready(start); else start(hot && hot.data);
-  window.__ts = { get G() { return G; }, tutorial, turnRound };
+  window.__ts = { get G() { return G; }, tutorial, turnRound, move };
 })();
 </script>
 </body>

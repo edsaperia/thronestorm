@@ -15,6 +15,7 @@ window.SKIN = (function () {
     pileStyle: () => '',
     words: {
       thinking: 'The opponent is thinking.',
+      dragToPick: 'Drag it to your row to claim it.',
       yourTurn: 'Your turn. Drag a relic from the reliquary to your row, or tap a glowing relic in the realm to plot.',
       two: (t) => `You now hold two ${KIND[t]}s. Drag one of them to a glowing place in the realm.`,
       twoDiagonals: 'Two diagonals rise from that relic. Tap another relic on the one you want.',

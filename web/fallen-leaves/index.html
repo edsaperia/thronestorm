@@ -78,6 +78,16 @@ button { font: inherit; color: inherit; }
 .side .prompt.warn { color: var(--warn); }
 .side .last { margin: 0; color: var(--dim); font-size: 14px; -webkit-user-select: text; user-select: text; }
 .side .grow { flex: 1; }
+.side .words { display: flex; flex-direction: column; gap: 8px; }
+/* when the realm is long, the words and buttons move to a strip under the table,
+   and the table takes the full width */
+.table.under { flex-wrap: wrap; row-gap: 2px; }
+.table.under .side { width: 100%; flex-direction: row; align-items: center; gap: 14px; padding: 0; min-height: 58px; }
+.table.under .side .words { flex: 1; gap: 1px; }
+.table.under .side .grow { display: none; }
+.table.under .side .prompt { font-size: 15px; line-height: 1.25; }
+.table.under .side .last { font-size: 13px; }
+.table.under .actions { flex-wrap: nowrap; }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 /* Always landscape: on a screen held upright the whole stage is turned on its
    side, so turning the phone shows the game the right way up. */
@@ -243,6 +253,14 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
 .hero h1 { font: italic 500 42px/1 var(--display); margin: 0; text-wrap: balance; text-align: center; }
 .hero-row { display: grid; grid-template-columns: repeat(4, 60px); gap: 8px; }
 .won { font-style: italic; letter-spacing: 0; }
+/* rings on the water where a leaf comes down */
+#ripples { position: absolute; left: 0; top: 0; }
+.ripple {
+  position: fixed; border-radius: 50%; border: 1.5px solid rgba(220, 235, 240, .6); pointer-events: none;
+  opacity: 0; animation: ripple 1.5s ease-out forwards;
+}
+@keyframes ripple { 0% { transform: scale(.75); opacity: .75; } 100% { transform: scale(2.7); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ripple { display: none; } }
 
 </style>
 </head>
@@ -288,19 +306,22 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
     <h2>How to play</h2>
   <p>There are ten kinds of leaf (oak, chestnut, ginkgo, elm, willow, maple, aspen, hawthorn, ivy and ash), each in four colours: green, yellow, orange and red. Hold one kind of leaf in all four colours at the end of your turn and you win.</p>
   <p>The table has five rows. The far row is your opponent's leaves, the near row is yours, and the three between are the middle. The piles are at the side, one for each colour; the rims beside each pile are the leaves still beneath it.</p>
-  <p><b>Pick.</b> Drag a face-up leaf from a pile to your row (or just tap it). You may keep only one leaf of each colour, so if you now hold two, drag either one to a glowing place in the middle. A leaf goes at the left or right end of a row, and a column must be full before the next one starts.</p>
+  <p><b>Pick.</b> Drag a face-up leaf from a pile to your row. You may keep only one leaf of each colour, so if you now hold two, drag either one to a glowing place in the middle. A leaf goes at the left or right end of a row, and a column must be full before the next one starts.</p>
   <p><b>Match.</b> If a leaf on the row of the middle nearest you is the same kind as one you hold, tap it to match along a diagonal rising from it. Its three leaves come up into your hand. Put three back, in any order, from everything you now hold; the match is made when the third goes down. You must end with one of each colour. Put them back as they were to change your mind.</p>
   <p>Your opponent sits opposite, so their near row is the far row of the middle. You may also pass.</p>
     <div class="actions"><button class="btn primary" id="rules-close" type="button">Back to the game</button></div>
   </div>
 </section>
 
+<div id="ripples" aria-hidden="true"></div>
 <main class="table" id="table">
   <div class="rel" id="reliquary" aria-label="Piles of leaves"></div>
   <div class="board" id="board" aria-label="Opponent's leaves, the middle, and your leaves"></div>
   <aside class="side">
-    <p class="prompt" id="prompt" aria-live="polite"></p>
-    <p class="last" id="last"></p>
+    <div class="words">
+      <p class="prompt" id="prompt" aria-live="polite"></p>
+      <p class="last" id="last"></p>
+    </div>
     <div class="grow"></div>
     <div class="actions" id="actions"></div>
   </aside>
@@ -715,12 +736,14 @@ window.SKIN = (function () {
   return {
     kinds: KIND, houses: HOUSE, name, chip,
     ratio: 1, maxWidth: 96, gap: 4, handGap: 8, rowPitch: 0.866, handPitch: 1.22, // circles pack like a honeycomb
+    ripple: true,
     badge: () => '',
     slot: (t) => `<span class="dot k${t}"></span>`,
     // the leaves beneath a pile's top one show as rims running out to the left
     pileStyle: (n) => '--edges:' + (Array.from({ length: n }, (_, i) => `${-2 * (i + 1)}px 0 0 ${i % 2 ? 'rgba(10,18,22,.6)' : 'rgba(220,235,240,.45)'}`).join(',') || 'none'),
     words: {
       thinking: 'The opponent is thinking.',
+      dragToPick: 'Drag it to your row to pick it.',
       yourTurn: 'Your turn. Pick a leaf from the piles by dragging it to your row, or tap a glowing leaf in the middle to match.',
       two: (t) => `You now hold two ${KIND[t]} leaves. Drag one of them to a glowing place in the middle.`,
       twoDiagonals: 'Two diagonals rise from that leaf. Tap another leaf on the one you want.',
@@ -905,15 +928,25 @@ window.SKIN = (function () {
     for (const [, x] of TS.openSlots(s)) reach = Math.max(reach, Math.abs(x));
     reach = Math.max(4, Math.ceil(reach / 2) * 2); // the table grows in steps, so it rarely rescales
     const g = SKIN.gap, k = SKIN.rowPitch, gh = SKIN.handGap;
-    // five rows: hand, three realm rows (pitch k), hand
-    const byHeight = ((tableHeight() - 40 - 2 * k * g - 2 * gh + 4 * 5) / (3 + 2 * k)) / SKIN.ratio;
-    let bw, byWidth, cw;
-    for (let pass = 0; pass < 2; pass++) { // twice: the pile column's width follows the card size
-      bw = Math.max(200, board.clientWidth);
-      byWidth = (bw - 12 - reach * g) / (reach + 1);
-      cw = Math.floor(Math.max(22, Math.min(SKIN.maxWidth, byWidth, byHeight)));
-      document.documentElement.style.setProperty('--cw', cw + 'px');
-    }
+    const table = $('table'), wide = table.clientWidth - 24, high = tableHeight();
+    // five rows: hand, three realm rows (pitch k), hand. Words go beside the
+    // table or in a strip beneath it, whichever leaves the pieces larger.
+    const sizeFor = (sideWidth, stripHeight) => {
+      let w = 40;
+      for (let pass = 0; pass < 3; pass++) { // the pile column's width follows the piece size
+        const room = wide - (w + 20) - 10 - (sideWidth ? sideWidth + 10 : 0);
+        const byWidth = (room - 12 - reach * g) / (reach + 1);
+        const byHeight = ((high - 20 - stripHeight - 2 * k * g - 2 * gh) / (3 + 2 * k)) / SKIN.ratio;
+        w = Math.floor(Math.max(22, Math.min(SKIN.maxWidth, byWidth, byHeight)));
+      }
+      return w;
+    };
+    const beside = sizeFor(150, 0), beneath = sizeFor(0, 64);
+    const under = beneath > beside * 1.08;
+    table.classList.toggle('under', under);
+    const cw = under ? beneath : beside;
+    document.documentElement.style.setProperty('--cw', cw + 'px');
+    const bw = Math.max(200, board.clientWidth);
     const ch = Math.round(cw * SKIN.ratio);
     const realm = 6 + ch + gh, step = (ch + g) * k;
     const rowTop = [6, realm, realm + step, realm + 2 * step, realm + 2 * step + ch + gh];
@@ -1076,6 +1109,7 @@ window.SKIN = (function () {
   // Every relic is unique, so after each redraw a relic that has moved is
   // flown from where it was to where it is now.
 
+  let pace = 400; // milliseconds for a relic to fly; slower for the opponent's moves
   const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function places() {
     const m = {};
@@ -1107,11 +1141,22 @@ window.SKIN = (function () {
       el.style.visibility = 'hidden';
       const fly = g.animate(
         [{ transform: 'none' }, { transform: `translate(${dx}px,${dy}px) scale(${to.width / from.width},${to.height / from.height})` }],
-        { duration: 400, easing: 'cubic-bezier(.2,.7,.2,1)' });
-      const land = () => { g.remove(); el.style.visibility = ''; };
+        { duration: pace, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      let landed = false;
+      const land = () => { if (landed) return; landed = true; g.remove(); el.style.visibility = ''; if (SKIN.ripple) ripple(to); };
       fly.onfinish = land; fly.oncancel = land;
-      setTimeout(land, 480); // in case the animation never reports back, e.g. in a background tab
+      setTimeout(land, pace + 80); // in case the animation never reports back, e.g. in a background tab
     });
+  }
+  // rings spreading on the water where something has just come down
+  function ripple(r) {
+    for (let i = 0; i < 3; i++) {
+      const ring = document.createElement('div');
+      ring.className = 'ripple';
+      ring.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;animation-delay:${i * 0.22}s`;
+      $('ripples').appendChild(ring);
+      setTimeout(() => ring.remove(), 2200 + i * 220);
+    }
   }
   function render() {
     const old = Object.assign(places(), G.flyFrom || {}), was = q;
@@ -1119,6 +1164,7 @@ window.SKIN = (function () {
     fit();
     draw();
     slide(old, was);
+    pace = 400;
   }
 
   // ----- playing moves -----
@@ -1193,11 +1239,12 @@ window.SKIN = (function () {
         for (const [r, x] of m[1]) { const c = s.cells[TS.cid(r, x)]; stacks[ctype(c)].push(c); }
         stage = { stacks, lifted: -1, holes: m[1].map(([r, x]) => key(r, x)) };
       }
+      pace = 900;
       if (!stage) return commit(s, hit, 1);
       G.stage = stage;
       render();
-      setTimeout(() => { if (G.s === s) commit(s, hit, 1); }, 900);
-    }, 550);
+      setTimeout(() => { if (G.s === s) { pace = 900; commit(s, hit, 1); } }, 1700);
+    }, 700);
   }
 
   // Pick up a diagonal: its three relics join my hand and must be replaced.
@@ -1330,7 +1377,7 @@ window.SKIN = (function () {
       return move(G.pick, dstOf(dstEl));
     }
     if (!src) return;
-    if (src.k === 'deck') return move(src, { k: 'hand' });
+    if (src.k === 'deck') { G.note = W.dragToPick; return render(); } // a pick is a drag, never a tap
     if (samePick(src) && src.k === 'hand' && G.mode === 'plot') {
       // tapped twice: send it to the next empty place on the diagonal
       const i = G.plot.placed.indexOf(NONE);
@@ -1429,7 +1476,7 @@ window.SKIN = (function () {
   const hot = window.claude && window.claude.hot;
   if (hot && hot.snapshot) hot.snapshot(pack);
   if (hot && hot.ready) hot.ready(start); else start(hot && hot.data);
-  window.__ts = { get G() { return G; }, tutorial, turnRound };
+  window.__ts = { get G() { return G; }, tutorial, turnRound, move };
 })();
 </script>
 </body>

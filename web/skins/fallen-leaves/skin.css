@@ -70,3 +70,11 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
 .hero h1 { font: italic 500 42px/1 var(--display); margin: 0; text-wrap: balance; text-align: center; }
 .hero-row { display: grid; grid-template-columns: repeat(4, 60px); gap: 8px; }
 .won { font-style: italic; letter-spacing: 0; }
+/* rings on the water where a leaf comes down */
+#ripples { position: absolute; left: 0; top: 0; }
+.ripple {
+  position: fixed; border-radius: 50%; border: 1.5px solid rgba(220, 235, 240, .6); pointer-events: none;
+  opacity: 0; animation: ripple 1.5s ease-out forwards;
+}
+@keyframes ripple { 0% { transform: scale(.75); opacity: .75; } 100% { transform: scale(2.7); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ripple { display: none; } }

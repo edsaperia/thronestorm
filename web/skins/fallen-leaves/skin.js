@@ -12,12 +12,14 @@ window.SKIN = (function () {
   return {
     kinds: KIND, houses: HOUSE, name, chip,
     ratio: 1, maxWidth: 96, gap: 4, handGap: 8, rowPitch: 0.866, handPitch: 1.22, // circles pack like a honeycomb
+    ripple: true,
     badge: () => '',
     slot: (t) => `<span class="dot k${t}"></span>`,
     // the leaves beneath a pile's top one show as rims running out to the left
     pileStyle: (n) => '--edges:' + (Array.from({ length: n }, (_, i) => `${-2 * (i + 1)}px 0 0 ${i % 2 ? 'rgba(10,18,22,.6)' : 'rgba(220,235,240,.45)'}`).join(',') || 'none'),
     words: {
       thinking: 'The opponent is thinking.',
+      dragToPick: 'Drag it to your row to pick it.',
       yourTurn: 'Your turn. Pick a leaf from the piles by dragging it to your row, or tap a glowing leaf in the middle to match.',
       two: (t) => `You now hold two ${KIND[t]} leaves. Drag one of them to a glowing place in the middle.`,
       twoDiagonals: 'Two diagonals rise from that leaf. Tap another leaf on the one you want.',
