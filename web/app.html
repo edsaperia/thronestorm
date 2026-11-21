@@ -254,7 +254,7 @@ body.rot #stage { min-height: 0; }
   //         plot-pick (choosing between two diagonals) | plot (diagonal picked up)
   // G.stage: the opponent part-way through a move, for showing it in two steps
   let G = null;
-  const blank = () => ({ angle: Array.from({ length: 48 }, () => Math.floor(Math.random() * 360)), where: {}, turnedFrom: {},
+  const blank = () => ({ angle: Array.from({ length: 48 }, () => Math.floor(Math.random() * 360)), where: {}, drift: {},
     mode: 'idle', pick: null, claim: null, plot: null, lines: null, stage: null, beam: null, hint: null,
     fresh: {}, note: '', warn: false, flyFrom: null });
   const myTurn = () => G.s.toMove === 0 && G.s.winner < 0 && !G.stage;
@@ -526,10 +526,10 @@ body.rot #stage { min-height: 0; }
     html += `<svg class="beams" aria-hidden="true">${beams.join('')}</svg>`;
     $('board').innerHTML = html;
     if (SKIN.spin) {
-      // no leaf has a right way up: each lies at the angle it landed at, until it is moved again
+      // no leaf has a right way up: each lies as it fell, and turns a little clockwise each time it is moved
       document.querySelectorAll('[data-card][data-at]').forEach((el) => {
         const c = el.dataset.card, at = el.dataset.at;
-        if (G.where[c] !== undefined && G.where[c] !== at) { G.turnedFrom[c] = G.angle[c]; G.angle[c] = Math.floor(Math.random() * 360); }
+        if (G.where[c] !== undefined && G.where[c] !== at) { const from = G.angle[c]; G.angle[c] += 15 + Math.floor(Math.random() * 26); (G.drift = G.drift || {})[c] = { from, to: G.angle[c], t0: performance.now() }; }
         G.where[c] = at;
         el.style.setProperty('--turn', G.angle[c] + 'deg');
       });
@@ -584,6 +584,16 @@ body.rot #stage { min-height: 0; }
     stage.appendChild(g);
     return g;
   }
+  // a moved leaf goes on turning slowly after it has come to rest, as things do on water
+  const DRIFT = 2800;
+  function drift(el, c) {
+    const d = G.drift && G.drift[c], gone = d ? performance.now() - d.t0 : DRIFT;
+    if (calm || gone >= DRIFT) return;
+    try {
+      el.animate([{ transform: `rotate(${d.from}deg)` }, { transform: `rotate(${d.to}deg)` }],
+        { duration: DRIFT, delay: -gone, easing: 'cubic-bezier(.25,.6,.3,1)', pseudoElement: '::after' });
+    } catch (e) { /* the leaf simply lies at its new angle */ }
+  }
   function slide(old, was) {
     document.querySelectorAll('.ghost').forEach((g) => g.remove());
     // relics just put down in the realm make rings: as they land, or at once if they do not fly
@@ -593,6 +603,7 @@ body.rot #stage { min-height: 0; }
       const el = !flying.has(card) && document.querySelector(`#board [data-card="${card}"]`);
       if (el && !calm) ripple(local(el.getBoundingClientRect()));
     }), 0);
+    if (SKIN.spin && document.body.animate) document.querySelectorAll('[data-card]').forEach((el) => drift(el, el.dataset.card));
     if (calm || !old || !document.body.animate || was !== q) return; // no flights while the screen itself is turning
     document.querySelectorAll('[data-card]').forEach((el) => {
       const seen = old[el.dataset.card];
@@ -610,12 +621,7 @@ body.rot #stage { min-height: 0; }
         [{ transform: 'none' }, { transform: `translate(${dx}px,${dy}px) scale(${to.width / from.width},${to.height / from.height})` }],
         { duration: pace, easing: 'cubic-bezier(.2,.7,.2,1)' });
       const c = el.dataset.card;
-      if (c in G.turnedFrom) {
-        try {
-          g.animate([{ transform: `rotate(${G.turnedFrom[c]}deg)` }, { transform: `rotate(${G.angle[c]}deg)` }],
-            { duration: pace, easing: 'ease-out', pseudoElement: '::after' });
-        } catch (e) { /* the leaf simply arrives at its new angle */ }
-      }
+      drift(g, c);
       let landed = false;
       const land = () => { if (landed) return; landed = true; g.remove(); el.style.visibility = ''; if (wet.has(el.dataset.card)) ripple(to); };
       flying.add(el.dataset.card);
@@ -639,7 +645,6 @@ body.rot #stage { min-height: 0; }
     fit();
     draw();
     slide(old, was);
-    G.turnedFrom = {};
     pace = 400;
   }
 
