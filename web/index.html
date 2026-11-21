@@ -149,6 +149,17 @@ button.card, button.slot, [data-dst] { cursor: pointer; }
   .card { transition: none; }
 }
 
+/* ----- a large window with a mouse ----- */
+body.desk { font-size: 19px; }
+body.desk .table { max-width: 1800px; gap: 18px; }
+body.desk .side { width: 250px; gap: 12px; }
+body.desk .side .last { font-size: 16px; }
+body.desk .actions { gap: 8px; }
+body.desk .actions .btn { min-height: 48px; }
+body.desk [data-src] { cursor: grab; }
+body.desk .title-inner { max-width: 760px; }
+body.desk .title-inner.sheet { max-width: 68ch; }
+
 /* ----- title screen and panels ----- */
 .title {
   position: fixed; inset: 0; z-index: 70; overflow: auto; display: grid; place-items: center; padding: 16px;
@@ -802,9 +813,26 @@ window.SKIN = (function () {
   // In a two-player game, is it the turn of the player on the far side? The pieces
   // stay where they are; the position is only read from the other side.
   const far = () => !!(G && G.turned);
+  // With a mouse and a large window there is room for a bigger table and longer lines.
+  // ?desktop=1 or ?desktop=0 in the address overrides the guess.
+  const asked = /[?&]desktop=([01])/.exec(location.search);
+  const MOUSE = asked ? asked[1] === '1' : !!(window.matchMedia && window.matchMedia('(any-hover: hover) and (any-pointer: fine)').matches);
+  let desk = false;
+  if (MOUSE) { // a mouse clicks; it does not tap
+    const click = (t) => t.replace(/\bTap\b/g, 'Click').replace(/\btap\b/g, 'click').replace(/\btapped\b/g, 'clicked');
+    const reword = (v) => typeof v === 'string' ? click(v)
+      : typeof v === 'function' ? (...a) => reword(v(...a))
+      : Array.isArray(v) ? v.map(reword)
+      : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, reword(x)])) : v;
+    Object.assign(SKIN.words, reword(SKIN.words));
+    const walk = document.createTreeWalker($('rules'), NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) n.nodeValue = click(n.nodeValue);
+  }
   function fit() {
     const Wd = window.innerWidth, Ht = window.innerHeight, st = stage.style;
     rot = Ht > Wd;
+    desk = MOUSE && !rot && Wd >= 1000 && Ht >= 640;
+    document.body.classList.toggle('desk', desk);
     q = rot ? 1 : 0;
     document.body.classList.toggle('turned', far()); // only the words turn to face the far player
     document.body.classList.toggle('rot', q !== 0);
@@ -857,10 +885,10 @@ window.SKIN = (function () {
     const g = SKIN.gap, k = SKIN.rowPitch, gh = SKIN.handGap;
     const wide = $('table').clientWidth - 24, high = tableHeight();
     // across: piles (a piece + 20), the table (span + 1 pieces), the words (150), two gaps of 10
-    const byWidth = (wide - 20 - 20 - 150 - 12 - span * g) / (span + 2);
+    const byWidth = (wide - 20 - 20 - (desk ? 250 : 150) - (desk ? 28 : 12) - span * g) / (span + 2);
     // down: five rows: hand, three realm rows (pitch k), hand
     const byHeight = ((high - 20 - 2 * k * g - 2 * gh) / (3 + 2 * k)) / SKIN.ratio;
-    const cw = Math.floor(Math.max(22, Math.min(SKIN.maxWidth, byWidth, byHeight)));
+    const cw = Math.floor(Math.max(22, Math.min(SKIN.maxWidth * (desk ? 1.6 : 1), byWidth, byHeight)));
     document.documentElement.style.setProperty('--cw', cw + 'px');
     const bw = Math.ceil(span * (cw + g) + cw + 12);
     board.style.width = bw + 'px';
@@ -1445,7 +1473,7 @@ window.SKIN = (function () {
   const hot = window.claude && window.claude.hot;
   if (hot && hot.snapshot) hot.snapshot(pack);
   if (hot && hot.ready) hot.ready(start); else start(hot && hot.data);
-  window.__ts = { get G() { return G; }, tutorial, turnRound, move };
+  window.__ts = { get G() { return G; }, tutorial, turnRound, move, play };
 })();
 </script>
 </body>
