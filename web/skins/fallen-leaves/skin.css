@@ -1,47 +1,68 @@
-/* Fallen Leaves: daylight on a forest floor. Round leaf tokens on dark earth,
-   warm paper around it, gold light for what is live. */
+/* Fallen Leaves: leaves floating on the glassy surface of a pond. One
+   background for the whole page; each leaf sits in a faint ring on the water. */
 :root {
-  color-scheme: light;
-  --ink: #efe6d3; --stone: #e3d7bf; --edge: #c5b393; --bone: #2f2418; --dim: #77664f;
-  --storm: #c8621b; --warn: #a3261f;
+  color-scheme: dark;
+  --ink: #2c626b; --stone: #17383e; --edge: rgba(255, 255, 255, .34); --bone: #f4faf7; --dim: rgba(244, 250, 247, .78);
+  --storm: #ffd98a; --warn: #ffb199;
   --display: "Fraunces", "Iowan Old Style", Georgia, serif;
-  --ar: 1; --glow: 255, 205, 110;
+  --ar: 1; --glow: 255, 226, 150;
 }
 body {
-  background: var(--grain), radial-gradient(110% 60% at 30% -10%, #fbf3df 0%, var(--ink) 65%) var(--ink);
-  background-blend-mode: multiply, normal;
+  /* sky caught in still water: pale where it reflects, deep toward the near bank, a few slow rings */
+  background:
+    radial-gradient(42% 30% at 22% 8%, rgba(255, 255, 255, .34), transparent 70%),
+    radial-gradient(36% 26% at 82% 18%, rgba(255, 255, 255, .20), transparent 72%),
+    repeating-radial-gradient(circle at 74% 88%, transparent 0 46px, rgba(255, 255, 255, .05) 47px 48px, transparent 49px 110px),
+    repeating-radial-gradient(circle at 12% 62%, transparent 0 70px, rgba(255, 255, 255, .04) 71px 72px, transparent 73px 160px),
+    linear-gradient(172deg, #8fbfc2 0%, #5b98a0 34%, #2f6a74 72%, #1f4f59 100%) #2f6a74;
   background-attachment: fixed;
 }
 h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
-.btn { background: rgba(255, 255, 255, .45); }
-.btn.primary { color: #fff8ec; }
-.board {
-  background: var(--grain), radial-gradient(75% 65% at 50% 50%, #5a4632 0%, #33271b 100%);
-  background-blend-mode: soft-light, normal;
-  box-shadow: inset 0 0 34px rgba(0, 0, 0, .6), 0 0 0 1px #5d4a35;
-}
-.board .rowmark { border-top-color: rgba(255, 240, 210, .12); }
+.btn { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .4); }
+.btn.primary { background: #ffd98a; border-color: #ffd98a; color: #1d3a3f; }
+.side .prompt, .side .last { text-shadow: 0 1px 2px rgba(0, 40, 48, .45); }
+
+/* no board: the table is the pond itself */
+.board { background: none; box-shadow: none; }
+.board .rowmark { display: none; }
+
+/* a leaf on the water: a faint glassy ring, the leaf and its shadow above it */
 .card, .slot { border-radius: 50%; }
 .card {
-  border: 1px solid #c9b895; background-color: #fbf5e6;
-  background-image: url(leaves.jpg); background-blend-mode: multiply;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, .45), inset 0 0 0 2px rgba(255, 255, 255, .5);
+  border: 1px solid rgba(255, 255, 255, .34);
+  background: radial-gradient(circle at 36% 28%, rgba(255, 255, 255, .26), rgba(255, 255, 255, .09) 58%, rgba(255, 255, 255, .03));
+  box-shadow: 0 3px 9px rgba(8, 44, 52, .30), inset 0 0 10px rgba(255, 255, 255, .10);
+  overflow: visible;
 }
-.card.back { background-image: none; background-color: var(--tint); box-shadow: 0 2px 5px rgba(0, 0, 0, .45), inset 0 0 0 5px rgba(255, 255, 255, .35); }
-.slot { border-color: var(--edge); }
-.board .slot { border-color: rgba(255, 240, 210, .3); background: rgba(0, 0, 0, .16); }
-.dot { width: 34%; aspect-ratio: 1; border-radius: 50%; background: var(--tint); opacity: .75; }
-.t0, .k0 { --tint: #3f8a3a; } .t1, .k1 { --tint: #c9c21f; } .t2, .k2 { --tint: #dd7a1e; } .t3, .k3 { --tint: #a81f2a; }
+.card::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: url(leaves.webp); background-size: 1000% 400%;
+  background-position: calc(var(--hx) * 11.1111%) calc(var(--ty) * 33.3333%);
+  filter: drop-shadow(0 2px 2px rgba(6, 36, 44, .45));
+}
+.card.back { background: radial-gradient(circle at 36% 28%, rgba(255, 255, 255, .35), var(--tint)); }
+.card.back::after { display: none; }
+.slot { border-color: rgba(255, 255, 255, .38); background: rgba(255, 255, 255, .04); }
+.dot { width: 30%; aspect-ratio: 1; border-radius: 50%; background: var(--tint); opacity: .85; box-shadow: 0 0 0 1px rgba(255, 255, 255, .4); }
+.t0, .k0 { --tint: #3f8a3a; } .t1, .k1 { --tint: #cfc526; } .t2, .k2 { --tint: #dd7a1e; } .t3, .k3 { --tint: #a81f2a; }
 .chip { background: var(--tint); color: #fff; }
 .chip.k1 { color: #2f2a05; }
 /* a pile: rims of the leaves beneath, running out to the left */
 .pile::before { top: 0; bottom: 0; left: 0; right: 0; width: auto; border-radius: 50%; background: none; box-shadow: var(--edges); }
-.sel { filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 14px #ffe9b0); }
-.beam { stroke: #ffd98a; }
+.focus .card:not(.lit):not(.can):not(.sel):not(.ghost) { filter: brightness(.55) saturate(.55); opacity: .8; }
+.ghost { box-shadow: 0 10px 18px rgba(6, 36, 44, .45); }
+.beam { stroke: #fff3c9; opacity: .6; }
 .flash::after { display: none; }
-.title { background: var(--grain), radial-gradient(100% 80% at 50% 0%, #fbf3df 0%, #e6d9bd 80%); background-blend-mode: multiply, normal; }
-.hero { display: flex; flex-direction: column; gap: 18px; align-items: center; }
-.hero h1 { font: italic 500 46px/1 var(--display); margin: 0; color: #5a2d12; text-wrap: balance; text-align: center; }
-.hero-row { display: grid; grid-template-columns: repeat(4, 64px); gap: 8px; }
+
+/* settings: a panel over the game, which stays in view behind it */
+.title { background: rgba(14, 48, 54, .38); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.title-inner {
+  background: rgba(18, 54, 60, .93); border: 1px solid rgba(255, 255, 255, .3); border-radius: 10px;
+  padding: 22px 24px; box-shadow: 0 18px 50px rgba(4, 28, 34, .55);
+}
+.title-inner p { color: var(--dim); }
+.hero { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.hero h1 { font: italic 500 42px/1 var(--display); margin: 0; text-wrap: balance; text-align: center; }
+.hero-row { display: grid; grid-template-columns: repeat(4, 60px); gap: 8px; }
 .won { font-style: italic; letter-spacing: 0; }
 details summary { letter-spacing: .04em; font-style: italic; font-size: 17px; }
