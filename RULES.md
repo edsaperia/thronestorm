@@ -1,11 +1,11 @@
 # Thronestorm rules, as implemented
 
-**Relics.** n houses x 4 types (sword, shield, helmet, chalice). Standard game: n = 10.
+**Relics.** n houses x 4 types (sword, shield, helmet, trinket). Standard game: n = 10.
 
 **Goal.** Hold all four relics of one house in your inventory at the end of your own turn.
 
 **Setup.** One shuffled face-down deck per type (the reliquary). Four random
-chalices start face up in the realm as a diamond: one on the top row, two on
+trinkets start face up in the realm as a diamond: one on the top row, two on
 the middle row, one on the bottom row. The top relic of each deck is turned
 face up. Inventories start empty and hold at most one relic of each type.
 Inventories are open information.

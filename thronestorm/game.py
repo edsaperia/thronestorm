@@ -1,7 +1,7 @@
 """Thronestorm rules engine.
 
 Cards are ints: card = house * 4 + type.
-Types: 0 sword, 1 shield, 2 helmet, 3 chalice.
+Types: 0 sword, 1 shield, 2 helmet, 3 trinket.
 
 Realm coordinates are (row, x). Row 0 is the row nearest player 1, row 2 the
 row nearest player 0, row 1 the middle. Rows are offset like brickwork, so x is
@@ -18,8 +18,8 @@ import random
 from dataclasses import dataclass, field
 from itertools import permutations
 
-SWORD, SHIELD, HELMET, CHALICE = range(4)
-TYPE_NAMES = ("sword", "shield", "helmet", "chalice")
+SWORD, SHIELD, HELMET, CHALICE = range(4)  # the fourth kind is the trinket
+TYPE_NAMES = ("sword", "shield", "helmet", "trinket")
 START_SLOTS = ((0, 0), (1, -1), (1, 1), (2, 0))
 
 PASS = ("pass",)
