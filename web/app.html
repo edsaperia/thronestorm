@@ -87,6 +87,8 @@ button { font: inherit; color: inherit; }
    side, so turning the phone shows the game the right way up. */
 body.rot { overflow: hidden; }
 body.rot #stage { position: fixed; overflow: auto; }
+/* two players: the words turn to face whoever is to move; the pieces stay as they are */
+body.turned .side, body.turned .title-inner { transform: rotate(180deg); }
 
 /* ----- relics ----- */
 .card, .slot {
@@ -319,16 +321,19 @@ body.rot #stage { min-height: 0; }
 
   // ----- drawing -----
 
-  // The stage can be turned. On an upright screen it lies on its side, so the
-  // game is always landscape. In a two-player game it also turns half way round
-  // for the player sitting opposite. q counts quarter turns clockwise; local()
-  // converts a rectangle on the screen into the stage's own coordinates.
+  // On an upright screen the stage lies on its side, so the game is always
+  // landscape. q counts quarter turns clockwise; local() converts a rectangle
+  // on the screen into the stage's own coordinates.
   const stage = $('stage');
   let rot = false, q = 0;
+  // In a two-player game, is it the turn of the player on the far side? The pieces
+  // stay where they are; the position is only read from the other side.
+  const far = () => !!(G && G.turned);
   function fit() {
     const Wd = window.innerWidth, Ht = window.innerHeight, st = stage.style;
     rot = Ht > Wd;
-    q = (rot ? 1 : 0) + (G && G.turned ? 2 : 0);
+    q = rot ? 1 : 0;
+    document.body.classList.toggle('turned', far()); // only the words turn to face the far player
     document.body.classList.toggle('rot', q !== 0);
     st.width = q % 2 ? Ht + 'px' : q ? Wd + 'px' : '';
     st.height = q % 2 ? Wd + 'px' : q ? Ht + 'px' : '';
@@ -347,8 +352,9 @@ body.rot #stage { min-height: 0; }
   }
   const localMove = (dx, dy) => [[dx, dy], [dy, -dx], [-dx, -dy], [-dy, dx]][q];
 
-  // Two players at one screen: after each move the position is turned round, so
-  // the player to move is always the one at the bottom of the stage.
+  // Two players at one screen: after each move the position is turned round in
+  // the model, so the player to move is always "player 0". It is then drawn
+  // from the far side, so nothing moves on the screen.
   function turnRound(s) {
     const n = TS.clone(s);
     n.cells.fill(NONE);
@@ -373,6 +379,7 @@ body.rot #stage { min-height: 0; }
     for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) if (s.cells[TS.cid(r, x)] !== NONE) seen(x);
     for (const [, x] of TS.openSlots(s)) seen(x);
     left = Math.max(4, Math.ceil(left / 2) * 2); right = Math.max(4, Math.ceil(right / 2) * 2);
+    if (far()) [left, right] = [right, left];
     const span = (left + right) / 2; // pieces across, less one
     const g = SKIN.gap, k = SKIN.rowPitch, gh = SKIN.handGap;
     const wide = $('table').clientWidth - 24, high = tableHeight();
@@ -392,7 +399,9 @@ body.rot #stage { min-height: 0; }
     board.style.height = rowTop[4] + ch + 6 + 'px';
   }
   const at = (row, left) => `style="left:${left.toFixed(1)}px;top:${L.rowTop[row].toFixed(1)}px"`;
-  const cellPos = (r, x) => at(r + 1, L.x0 + x * (L.cw + L.g) / 2 - L.cw / 2);
+  // the mover's side of the position is drawn at the bottom, or at the top for the far player
+  const cellPos = (r, x) => (far() ? at(3 - r, L.x0 - x * (L.cw + L.g) / 2 - L.cw / 2) : at(r + 1, L.x0 + x * (L.cw + L.g) / 2 - L.cw / 2));
+  const myRow = () => (far() ? 0 : 4), oppRow = () => (far() ? 4 : 0);
   // Where the relics of a hand sit. Relics of one kind overlap by only a tenth,
   // so each stays readable and easy to pick; the row closes up if space is short.
   function handRow(stacks) {
@@ -444,15 +453,15 @@ body.rot #stage { min-height: 0; }
       return `<div class="pile" style="--k:${beneath};${SKIN.pileStyle(beneath)}" aria-label="${W.pile(t, beneath)}">${inner}</div>`;
     }).join('');
 
-    let html = `<div class="zone" id="hand-zone" data-dst="hand" style="left:0;right:0;top:${L.rowTop[4] - 3}px;height:${L.ch + 6}px"></div>`;
+    let html = `<div class="zone" id="hand-zone" data-dst="hand" style="left:0;right:0;top:${L.rowTop[myRow()] - 3}px;height:${L.ch + 6}px"></div>`;
     html += `<div class="rowmark" style="top:${(L.rowTop[0] + L.ch + L.rowTop[1]) / 2}px"></div><div class="rowmark" style="top:${(L.rowTop[3] + L.ch + L.rowTop[4]) / 2}px"></div>`;
 
     // hands: the opponent's on the top row, mine on the bottom
     const oppLeft = handRow(V.opp), meLeft = handRow(V.me);
     for (let t = 0; t < 4; t++) {
-      if (!V.opp[t].length) html += slotHtml(t, at(0, oppLeft(t, 0)));
-      V.opp[t].forEach((c, i) => { html += cardHtml(c, at(0, oppLeft(t, i)), (G.fresh['o' + t] ? 'fresh' : '') + (G.stage ? ' lit' : '')); });
-      if (!V.me[t].length) html += slotHtml(t, at(4, meLeft(t, 0)));
+      if (!V.opp[t].length) html += slotHtml(t, at(oppRow(), oppLeft(t, 0)));
+      V.opp[t].forEach((c, i) => { html += cardHtml(c, at(oppRow(), oppLeft(t, i)), (G.fresh['o' + t] ? 'fresh' : '') + (G.stage ? ' lit' : '')); });
+      if (!V.me[t].length) html += slotHtml(t, at(myRow(), meLeft(t, 0)));
       V.me[t].forEach((c, i) => {
         let cls = G.fresh['m' + t] ? 'fresh' : '', attrs = '';
         if (G.mode === 'plot' || (G.mode === 'claim' && G.claim.t === t)) {
@@ -460,7 +469,7 @@ body.rot #stage { min-height: 0; }
           cls += picked('hand', c) ? ' sel' : G.mode === 'claim' ? ' can' : ' lit';
         }
         if (H && H.m[0] === 'claim' && H.m[2] === c) cls += ' hint';
-        html += cardHtml(c, attrs + at(4, meLeft(t, i)), cls);
+        html += cardHtml(c, attrs + at(myRow(), meLeft(t, i)), cls);
       });
     }
 
@@ -503,7 +512,7 @@ body.rot #stage { min-height: 0; }
 
     // beams of light along diagonals, drawn over the relics
     const beams = [];
-    const mid = (r, x) => [L.x0 + x * (L.cw + L.g) / 2, L.rowTop[r + 1] + L.ch / 2];
+    const mid = (r, x) => (far() ? [L.x0 - x * (L.cw + L.g) / 2, L.rowTop[3 - r] + L.ch / 2] : [L.x0 + x * (L.cw + L.g) / 2, L.rowTop[r + 1] + L.ch / 2]);
     const addBeam = (line, dim) => {
       const a = mid(line[0][0], line[0][1]), b = mid(line[2][0], line[2][1]);
       beams.push(`<line class="beam ${dim ? 'dim' : ''}" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/>`);
@@ -572,7 +581,7 @@ body.rot #stage { min-height: 0; }
       const el = !flying.has(card) && document.querySelector(`#board [data-card="${card}"]`);
       if (el && !calm) ripple(local(el.getBoundingClientRect()));
     }), 0);
-    if (calm || !old || !document.body.animate || was !== q) return; // no flights across a turn of the stage
+    if (calm || !old || !document.body.animate || was !== q) return; // no flights while the screen itself is turning
     document.querySelectorAll('[data-card]').forEach((el) => {
       const seen = old[el.dataset.card];
       if (!seen) {
