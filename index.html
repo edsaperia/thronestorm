@@ -802,7 +802,20 @@ window.SKIN = (function () {
   }
   const at = (row, left) => `style="left:${left.toFixed(1)}px;top:${L.rowTop[row].toFixed(1)}px"`;
   const cellPos = (r, x) => at(r + 1, L.x0 + x * (L.cw + L.g) / 2 - L.cw / 2);
-  const handLeft = (t, i) => L.x0 + (t - 1.5) * L.pitch - L.cw / 2 + i * L.cw * 0.3;
+  // Where the relics of a hand sit. Relics of one kind overlap by only a tenth,
+  // so each stays readable and easy to pick; the row closes up if space is short.
+  function handRow(stacks) {
+    const n = stacks.map((st) => Math.max(1, st.length));
+    const extra = n.reduce((a, b) => a + b - 1, 0), room = L.x0 * 2 - 12;
+    let gap = L.pitch - L.cw, step = L.cw * 0.9;
+    const width = () => 4 * L.cw + extra * step + 3 * gap;
+    if (width() > room) gap = Math.max(4, (room - 4 * L.cw - extra * step) / 3);
+    if (width() > room && extra) step = Math.max(L.cw * 0.3, (room - 4 * L.cw - 3 * gap) / extra);
+    const starts = [];
+    let x = L.x0 - width() / 2;
+    for (let t = 0; t < 4; t++) { starts.push(x); x += L.cw + (n[t] - 1) * step + gap; }
+    return (t, i) => starts[t] + i * step;
+  }
 
   function cardHtml(c, attrs, cls) {
     const live = attrs && /data-(src|dst|act)/.test(attrs);
@@ -843,10 +856,11 @@ window.SKIN = (function () {
     html += `<div class="rowmark" style="top:${(L.rowTop[0] + L.ch + L.rowTop[1]) / 2}px"></div><div class="rowmark" style="top:${(L.rowTop[3] + L.ch + L.rowTop[4]) / 2}px"></div>`;
 
     // hands: the opponent's on the top row, mine on the bottom
+    const oppLeft = handRow(V.opp), meLeft = handRow(V.me);
     for (let t = 0; t < 4; t++) {
-      if (!V.opp[t].length) html += slotHtml(t, at(0, handLeft(t, 0)));
-      V.opp[t].forEach((c, i) => { html += cardHtml(c, at(0, handLeft(t, i)), (G.fresh['o' + t] ? 'fresh' : '') + (G.stage ? ' lit' : '')); });
-      if (!V.me[t].length) html += slotHtml(t, at(4, handLeft(t, 0)));
+      if (!V.opp[t].length) html += slotHtml(t, at(0, oppLeft(t, 0)));
+      V.opp[t].forEach((c, i) => { html += cardHtml(c, at(0, oppLeft(t, i)), (G.fresh['o' + t] ? 'fresh' : '') + (G.stage ? ' lit' : '')); });
+      if (!V.me[t].length) html += slotHtml(t, at(4, meLeft(t, 0)));
       V.me[t].forEach((c, i) => {
         let cls = G.fresh['m' + t] ? 'fresh' : '', attrs = '';
         if (G.mode === 'plot' || (G.mode === 'claim' && G.claim.t === t)) {
@@ -854,7 +868,7 @@ window.SKIN = (function () {
           cls += picked('hand', c) ? ' sel' : G.mode === 'claim' ? ' can' : ' lit';
         }
         if (H && H.m[0] === 'claim' && H.m[2] === c) cls += ' hint';
-        html += cardHtml(c, attrs + at(4, handLeft(t, i)), cls);
+        html += cardHtml(c, attrs + at(4, meLeft(t, i)), cls);
       });
     }
 
