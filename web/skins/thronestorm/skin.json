@@ -1,0 +1,10 @@
+{
+  "out": "index.html",
+  "title": "Thronestorm",
+  "fonts": "Alegreya+Sans:wght@400;500;700&family=IM+Fell+English+SC",
+  "tagline": "An abstract strategy game for two players. Unite all four relics of one noble house.",
+  "strength": ["Squire", "Knight", "Regent"],
+  "piles": "Reliquary",
+  "table": "Opponent's relics, the realm, and your relics",
+  "assets": ["cards.jpg", "backs.jpg", "title.jpg"]
+}

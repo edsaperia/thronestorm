@@ -1,0 +1,47 @@
+/* Fallen Leaves: daylight on a forest floor. Round leaf tokens on dark earth,
+   warm paper around it, gold light for what is live. */
+:root {
+  color-scheme: light;
+  --ink: #efe6d3; --stone: #e3d7bf; --edge: #c5b393; --bone: #2f2418; --dim: #77664f;
+  --storm: #c8621b; --warn: #a3261f;
+  --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --ar: 1; --glow: 255, 205, 110;
+}
+body {
+  background: var(--grain), radial-gradient(110% 60% at 30% -10%, #fbf3df 0%, var(--ink) 65%) var(--ink);
+  background-blend-mode: multiply, normal;
+  background-attachment: fixed;
+}
+h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
+.btn { background: rgba(255, 255, 255, .45); }
+.btn.primary { color: #fff8ec; }
+.board {
+  background: var(--grain), radial-gradient(75% 65% at 50% 50%, #5a4632 0%, #33271b 100%);
+  background-blend-mode: soft-light, normal;
+  box-shadow: inset 0 0 34px rgba(0, 0, 0, .6), 0 0 0 1px #5d4a35;
+}
+.board .rowmark { border-top-color: rgba(255, 240, 210, .12); }
+.card, .slot { border-radius: 50%; }
+.card {
+  border: 1px solid #c9b895; background-color: #fbf5e6;
+  background-image: url(leaves.jpg); background-blend-mode: multiply;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .45), inset 0 0 0 2px rgba(255, 255, 255, .5);
+}
+.card.back { background-image: none; background-color: var(--tint); box-shadow: 0 2px 5px rgba(0, 0, 0, .45), inset 0 0 0 5px rgba(255, 255, 255, .35); }
+.slot { border-color: var(--edge); }
+.board .slot { border-color: rgba(255, 240, 210, .3); background: rgba(0, 0, 0, .16); }
+.dot { width: 34%; aspect-ratio: 1; border-radius: 50%; background: var(--tint); opacity: .75; }
+.t0, .k0 { --tint: #3f8a3a; } .t1, .k1 { --tint: #c9c21f; } .t2, .k2 { --tint: #dd7a1e; } .t3, .k3 { --tint: #a81f2a; }
+.chip { background: var(--tint); color: #fff; }
+.chip.k1 { color: #2f2a05; }
+/* a pile: rims of the leaves beneath, running out to the left */
+.pile::before { top: 0; bottom: 0; left: 0; right: 0; width: auto; border-radius: 50%; background: none; box-shadow: var(--edges); }
+.sel { filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 14px #ffe9b0); }
+.beam { stroke: #ffd98a; }
+.flash::after { display: none; }
+.title { background: var(--grain), radial-gradient(100% 80% at 50% 0%, #fbf3df 0%, #e6d9bd 80%); background-blend-mode: multiply, normal; }
+.hero { display: flex; flex-direction: column; gap: 18px; align-items: center; }
+.hero h1 { font: italic 500 46px/1 var(--display); margin: 0; color: #5a2d12; text-wrap: balance; text-align: center; }
+.hero-row { display: grid; grid-template-columns: repeat(4, 64px); gap: 8px; }
+.won { font-style: italic; letter-spacing: 0; }
+details summary { letter-spacing: .04em; font-style: italic; font-size: 17px; }

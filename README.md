@@ -46,3 +46,14 @@ cd trainer && cargo build --release
 
 Other `train` options: `threads=`, `eps=` (exploration), `lambda=`, `lr=`, `seed=`, `depth=` (lookahead while training; 3 is a good trade-off).
 Set `NOPASS=1` to play the variant where passing is only allowed with no other move.
+
+## Web version and skins
+
+`web/app.html` is the game page; `web/engine.js` is the rules and the trained
+player in JavaScript, checked against the Rust trainer by `tests/web_check.js`.
+`python web/build.py` writes one page per skin in `web/skins/`:
+
+- `web/index.html`: Thronestorm
+- `web/fallen-leaves/index.html`: Fallen Leaves (ten kinds of leaf in four colours, round tokens in a honeycomb)
+
+The `gh-pages` branch holds the built pages and their art.
