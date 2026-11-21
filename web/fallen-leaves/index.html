@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fallen Leaves</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500&display=swap" rel="stylesheet">
+<style>
+/* One visual world: a storm-dark table. Five rows of relics: the opponent's
+   hand, the three rows of the realm, your hand. Reliquary on the left, a
+   narrow panel of words and buttons on the right. Light marks what is live. */
+:root {
+  color-scheme: dark;
+  --ink: #120e17;
+  --stone: #1c1723;
+  --edge: #3b3247;
+  --bone: #ece5d8;
+  --dim: #a297ad;
+  --storm: #b5d0ff;
+  --warn: #ffb58a;
+  --display: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  --cw: 40px;
+  --ar: 9 / 14;      /* relic shape, width / height */
+  --glow: 181, 208, 255;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background:
+    var(--grain),
+    radial-gradient(90% 38% at 70% -6%, rgba(150, 170, 230, .20), transparent 70%),
+    radial-gradient(120% 70% at 50% 0%, #2a1f36 0%, var(--ink) 62%) var(--ink);
+  background-blend-mode: soft-light, normal, normal;
+  background-attachment: fixed;
+  color: var(--bone);
+  font: 400 16px/1.35 var(--body);
+  min-height: 100%;
+  -webkit-user-select: none; user-select: none;
+}
+h2 { font: 400 14px/1 var(--display); letter-spacing: .16em; color: var(--dim); margin: 0; }
+button { font: inherit; color: inherit; }
+.btn {
+  background: rgba(255, 255, 255, .04); border: 1px solid var(--edge); border-radius: 10px;
+  padding: 8px 12px; cursor: pointer; font-weight: 500;
+}
+.btn:hover { border-color: var(--dim); }
+.btn.primary { background: var(--storm); border-color: var(--storm); color: #10131c; font-weight: 700; }
+.btn:disabled { opacity: .4; cursor: default; }
+:focus-visible { outline: 2px solid var(--storm); outline-offset: 2px; }
+
+/* ----- the table ----- */
+.table { display: flex; gap: 10px; align-items: center; justify-content: center; padding: 4px 12px; width: 100%; max-width: 1100px; margin: 0 auto; }
+.rel { display: grid; gap: 6px; width: calc(var(--cw) + 20px); flex: none; padding-left: 20px; }
+.pile { position: relative; }
+/* the relics beneath each face-up one show as card edges running out to the left */
+.pile::before {
+  content: ""; position: absolute; top: 2px; bottom: 2px; right: calc(100% - 1px); width: calc(var(--k) * 2px);
+  background: repeating-linear-gradient(to left, #8a7f97 0 1px, #1b1622 1px 2px); border-radius: 3px 0 0 3px;
+}
+.board {
+  position: relative; flex: none; border-radius: 6px;
+  background: var(--grain), radial-gradient(70% 60% at 50% 50%, #2c2338 0%, #17121d 100%);
+  background-blend-mode: soft-light, normal;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, .75), 0 0 0 1px var(--edge);
+}
+.board > .card, .board > .slot, .board > .zone { position: absolute; }
+.board > .card, .board > .slot { width: var(--cw); }
+.board .rowmark { position: absolute; left: 0; right: 0; border-top: 1px solid rgba(255, 255, 255, .07); pointer-events: none; }
+.board svg.beams { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; mix-blend-mode: screen; }
+.beam { stroke: var(--storm); stroke-width: 6; stroke-linecap: round; opacity: .5; filter: drop-shadow(0 0 5px var(--storm)) drop-shadow(0 0 14px #fff); }
+.beam.dim { stroke: var(--dim); stroke-width: 3; stroke-dasharray: 3 9; opacity: .8; filter: none; }
+.side { width: 150px; flex: none; display: flex; flex-direction: column; gap: 8px; align-self: stretch; padding: 4px 0; }
+.side .prompt { margin: 0; text-wrap: balance; }
+.side .prompt.warn { color: var(--warn); }
+.side .last { margin: 0; color: var(--dim); font-size: 14px; -webkit-user-select: text; user-select: text; }
+.side .grow { flex: 1; }
+/* the table's buttons: a grid of equal size */
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.actions .btn { width: 100%; min-height: 40px; padding: 6px 4px; }
+.actions .btn:only-child { grid-column: 1 / -1; }
+.side .words { display: flex; flex-direction: column; gap: 8px; }
+/* Always landscape: on a screen held upright the whole stage is turned on its
+   side, so turning the phone shows the game the right way up. */
+body.rot { overflow: hidden; }
+body.rot #stage { position: fixed; overflow: auto; }
+/* two players: the words turn to face whoever is to move; the pieces stay as they are */
+body.turned .side, body.turned .title-inner { transform: rotate(180deg); }
+
+/* ----- relics ----- */
+.card, .slot {
+  position: relative; width: 100%; aspect-ratio: var(--ar); border-radius: 4px; padding: 0;
+  display: grid; place-items: center;
+}
+.slot { border: 1px dashed var(--edge); color: var(--edge); background: rgba(0, 0, 0, .18); }
+.slot svg { width: 46%; height: 46%; fill: currentColor; opacity: .7; }
+.slot.faint { opacity: .4; }
+/* relic art: one sheet, ten houses across and four kinds down */
+.card {
+  border: 1px solid rgba(0, 0, 0, .7); background-color: var(--h);
+  background-image: url(cards.jpg); background-size: 1000% 400%;
+  background-position: calc(var(--hx) * 11.1111%) calc(var(--ty) * 33.3333%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .6);
+  cursor: default; overflow: hidden;
+  transition: filter .25s, transform .2s;
+}
+.card .kind {
+  position: absolute; right: 4%; bottom: 3%; width: 32%; aspect-ratio: 1; border-radius: 50%;
+  background: rgba(10, 8, 14, .72); display: grid; place-items: center; pointer-events: none;
+}
+.card .kind svg { width: 62%; height: 62%; fill: #f1ebdf; }
+.card.back { background-image: url(backs.jpg); background-size: 400% 100%; background-position: calc(var(--ty) * 33.3333%) 0; }
+.t0 { --ty: 0; } .t1 { --ty: 1; } .t2 { --ty: 2; } .t3 { --ty: 3; }
+/* houses in the order of the printed deck: Cleric, Necromancer, Warrior, Paladin, Monk,
+   Assassin, Wizard, Bard, Swashbuckler, Barbarian; --h and --g colour their names */
+.h0 { --hx: 0; --h: #c98a2b; --g: #17130a; } .h1 { --hx: 1; --h: #3a3b3d; --g: #fff; }
+.h2 { --hx: 2; --h: #b3283a; --g: #fff; }    .h3 { --hx: 3; --h: #5d3f86; --g: #fff; }
+.h4 { --hx: 4; --h: #a04a35; --g: #fff; }    .h5 { --hx: 5; --h: #2f4a80; --g: #fff; }
+.h6 { --hx: 6; --h: #2f9fb6; --g: #0d1a1e; } .h7 { --hx: 7; --h: #2f5a34; --g: #fff; }
+.h8 { --hx: 8; --h: #1f8a63; --g: #fff; }    .h9 { --hx: 9; --h: #9a9c9e; --g: #14161a; }
+.chip { display: inline-block; padding: 0 5px; border-radius: 3px; background: var(--h); color: var(--g); font-weight: 500; white-space: nowrap; }
+
+/* ----- light: what is live glows, the rest falls back ----- */
+[data-src] { touch-action: none; cursor: grab; }
+button.card, button.slot, [data-dst] { cursor: pointer; }
+.can { filter: drop-shadow(0 0 4px var(--storm)) drop-shadow(0 0 11px rgba(var(--glow), .75)); transform: translateY(-2px); animation: breathe 2.6s ease-in-out infinite; }
+@keyframes breathe { 50% { filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 18px var(--storm)); } }
+.slot.lit, body.dragging .slot.target {
+  opacity: 1; border: 1px solid rgba(var(--glow), .7);
+  background: radial-gradient(circle at 50% 50%, rgba(var(--glow), .38), rgba(var(--glow), .05) 70%);
+  box-shadow: 0 0 14px rgba(var(--glow), .35);
+}
+.sel { filter: drop-shadow(0 0 5px #fff) drop-shadow(0 0 16px #fff); transform: translateY(-4px); }
+.hint { filter: drop-shadow(0 0 5px #ffd98a) drop-shadow(0 0 16px #ffb347); animation: none; }
+.slot.hint { opacity: 1; border: 1px solid #ffd98a; background: radial-gradient(circle at 50% 50%, rgba(255, 200, 110, .45), transparent 72%); }
+.over { filter: drop-shadow(0 0 6px var(--warn)) drop-shadow(0 0 18px var(--warn)) !important; }
+.focus .card:not(.lit):not(.can):not(.sel):not(.ghost) { filter: brightness(.38) saturate(.6); }
+.zone.target { border-radius: 6px; background: radial-gradient(60% 120% at 50% 50%, rgba(var(--glow), .16), transparent 75%); }
+.fresh { animation: fresh 1.6s ease-out; }
+@keyframes fresh { 0% { filter: drop-shadow(0 0 8px var(--warn)) drop-shadow(0 0 20px var(--warn)); } 100% { filter: none; } }
+.ghost { box-shadow: 0 8px 18px rgba(0, 0, 0, .65); filter: none !important; animation: none !important; transition: none; }
+.flash::after { content: ""; position: fixed; inset: 0; background: #dfe9ff; pointer-events: none; animation: flash .9s ease-out forwards; z-index: 80; }
+@keyframes flash { 0% { opacity: 0; } 8% { opacity: .75; } 16% { opacity: .1; } 26% { opacity: .55; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .can { animation: none; } .fresh { animation: none; } .flash::after { animation: none; opacity: 0; }
+  .card { transition: none; }
+}
+
+/* ----- title screen and panels ----- */
+.title {
+  position: fixed; inset: 0; z-index: 70; overflow: auto; display: grid; place-items: center; padding: 16px;
+  background: var(--grain), radial-gradient(100% 80% at 50% 0%, #2a1f36 0%, #0d0a11 75%);
+  background-blend-mode: soft-light, normal;
+}
+.title[hidden] { display: none; }
+.title-inner { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 320px); gap: 22px; align-items: center; max-width: 660px; }
+.title-inner img { width: 100%; border-radius: 6px; box-shadow: 0 10px 40px rgba(0, 0, 0, .8), 0 0 60px rgba(150, 170, 230, .18); }
+.title-inner .controls { display: flex; flex-direction: column; gap: 14px; }
+.title-inner p { margin: 0; color: var(--dim); max-width: 34ch; }
+@media (max-width: 560px) and (orientation: landscape) { .title-inner { grid-template-columns: minmax(0, 300px); justify-content: center; } }
+@media (max-height: 430px) { .title-inner img { max-height: 78vh; width: auto; justify-self: end; } }
+.title-inner { position: relative; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choices[hidden] { display: none; }
+.choices .btn { min-height: 44px; }
+#mode-choice #go-tutorial, #level-choice #level-back { grid-column: 1 / -1; }
+#level-choice { grid-template-columns: 1fr 1fr 1fr; }
+.close {
+  position: absolute; top: -14px; right: -14px; width: 38px; height: 38px; border-radius: 50%; padding: 0; z-index: 1;
+  background: var(--stone); border: 1px solid var(--edge); cursor: pointer; font-size: 22px; line-height: 1;
+}
+.close[hidden] { display: none; }
+.won { font: 400 21px/1.2 var(--display); letter-spacing: .06em; color: var(--bone); }
+/* the rules, as a sheet over the game */
+.title-inner.sheet { display: block; max-width: 64ch; max-height: 100%; overflow: auto; color: var(--dim); -webkit-user-select: text; user-select: text; }
+.title-inner.sheet p { max-width: none; margin: .6em 0; }
+/* the table sits in the middle of the screen */
+#stage { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; }
+body.rot #stage { min-height: 0; }
+/* Fallen Leaves: leaves floating on the glassy surface of a pond. One
+   background for the whole page; each leaf sits in a faint ring on the water. */
+:root {
+  color-scheme: dark;
+  --ink: #1d2a31; --stone: #162127; --edge: rgba(255, 255, 255, .30); --bone: #eef3f2; --dim: rgba(238, 243, 242, .74);
+  --storm: #ffcf8a; --warn: #ffab8f;
+  --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --ar: 1; --glow: 255, 214, 150;
+}
+body {
+  /* dark, still water under an overcast sky: slate blue-grey, long pale glints where the
+     surface catches the light, slow rings, and the blurred warmth of leaves out of focus */
+  background:
+    radial-gradient(26% 9% at 14% 5%, rgba(214, 120, 52, .30), transparent 72%),
+    radial-gradient(22% 8% at 86% 9%, rgba(200, 104, 44, .26), transparent 72%),
+    radial-gradient(18% 6% at 58% 3%, rgba(190, 96, 40, .18), transparent 72%),
+    radial-gradient(60% 7% at 30% 24%, rgba(160, 184, 196, .16), transparent 70%),
+    radial-gradient(70% 9% at 72% 46%, rgba(150, 176, 190, .12), transparent 70%),
+    radial-gradient(55% 8% at 22% 72%, rgba(140, 168, 182, .10), transparent 70%),
+    repeating-radial-gradient(ellipse 130% 60% at 70% 92%, transparent 0 44px, rgba(190, 210, 220, .05) 45px 47px, transparent 48px 104px),
+    repeating-radial-gradient(ellipse 130% 60% at 10% 58%, transparent 0 68px, rgba(190, 210, 220, .035) 69px 71px, transparent 72px 156px),
+    linear-gradient(176deg, #33454e 0%, #2a3a43 30%, #212f37 62%, #17232a 100%) #212f37;
+  background-attachment: fixed;
+}
+h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
+.btn { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .4); }
+.btn.primary { background: #ffcf8a; border-color: #ffcf8a; color: #1c262c; }
+.side .prompt, .side .last { text-shadow: 0 1px 2px rgba(0, 0, 0, .5); }
+
+/* no board: the table is the pond itself */
+.board { background: none; box-shadow: none; }
+.board .rowmark { display: none; }
+
+/* a leaf on the water: a faint glassy ring, the leaf and its shadow above it */
+.card, .slot { border-radius: 50%; }
+.card {
+  border: 1px solid rgba(220, 235, 240, .30);
+  background: radial-gradient(circle at 36% 28%, rgba(220, 235, 240, .22), rgba(220, 235, 240, .08) 58%, rgba(220, 235, 240, .03));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .40), inset 0 0 10px rgba(255, 255, 255, .08);
+  overflow: visible;
+}
+.card::after {
+  content: ""; position: absolute; inset: -11%; pointer-events: none; /* a leaf may lap over its ring */
+  background-image: url(leaves.webp); background-size: 1000% 400%;
+  background-position: calc(var(--hx) * 11.1111%) calc(var(--ty) * 33.3333%);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55));
+  transform: rotate(var(--turn, 0deg)); /* no leaf has a right way up */
+}
+.card.back { background: radial-gradient(circle at 36% 28%, rgba(255, 255, 255, .35), var(--tint)); }
+.card.back::after { display: none; }
+.slot { border-color: rgba(255, 255, 255, .38); background: rgba(255, 255, 255, .04); }
+.dot { width: 30%; aspect-ratio: 1; border-radius: 50%; background: var(--tint); opacity: .85; box-shadow: 0 0 0 1px rgba(255, 255, 255, .4); }
+.t0, .k0 { --tint: #3f8a3a; } .t1, .k1 { --tint: #cfc526; } .t2, .k2 { --tint: #dd7a1e; } .t3, .k3 { --tint: #a81f2a; }
+.chip { background: var(--tint); color: #fff; }
+.chip.k1 { color: #2f2a05; }
+/* a pile: rims of the leaves beneath, running out to the left */
+.pile::before { top: 0; bottom: 0; left: 0; right: 0; width: auto; border-radius: 50%; background: none; box-shadow: var(--edges); }
+.focus .card:not(.lit):not(.can):not(.sel):not(.ghost) { filter: brightness(.5) saturate(.5); opacity: .75; }
+.ghost { box-shadow: 0 10px 18px rgba(6, 36, 44, .45); }
+.beam { stroke: #fff3c9; opacity: .6; }
+.flash::after { display: none; }
+
+/* settings: a panel over the game, which stays in view behind it */
+.title { background: rgba(10, 16, 20, .45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.title-inner {
+  background: rgba(26, 37, 44, .95); border: 1px solid rgba(255, 255, 255, .22); border-radius: 10px;
+  padding: 22px 24px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+}
+.title-inner p { color: var(--dim); }
+.hero { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.hero h1 { font: italic 500 42px/1 var(--display); margin: 0; text-wrap: balance; text-align: center; }
+.hero-row { display: grid; grid-template-columns: repeat(4, 60px); gap: 8px; }
+.won { font-style: italic; letter-spacing: 0; }
+/* rings on the water where a leaf comes down */
+#ripples { position: absolute; left: 0; top: 0; }
+.ripple {
+  position: fixed; border-radius: 50%; border: 1.5px solid rgba(220, 235, 240, .6); pointer-events: none;
+  opacity: 0; animation: ripple 1.5s ease-out forwards;
+}
+@keyframes ripple { 0% { transform: scale(.75); opacity: .75; } 100% { transform: scale(2.7); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ripple { display: none; } }
+.hero-row .card:nth-child(1) { --turn: -24deg; } .hero-row .card:nth-child(2) { --turn: 31deg; } .hero-row .card:nth-child(3) { --turn: -8deg; } .hero-row .card:nth-child(4) { --turn: 52deg; }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="g0" viewBox="0 0 24 24"><path d="M12 1.5 14.2 5v9.5H9.8V5zM6.5 14.5h11v2.2h-11zM10.9 16.7h2.2v3.6h-2.2z"/><circle cx="12" cy="21.4" r="1.5"/></symbol>
+  <symbol id="g1" viewBox="0 0 24 24"><path d="M12 2 20 4.8v6.4c0 5-3.4 8.4-8 10.8-4.6-2.4-8-5.8-8-10.8V4.8z"/></symbol>
+  <symbol id="g2" viewBox="0 0 24 24"><path d="M12 2.5c4.7 0 8.2 3.7 8.2 8.3V21h-5.4v-5.2l1.8-1.7v-2.4H7.4v2.400l1.8 1.700V21H3.800V10.800c0-4.600 3.500-8.300 8.200-8.300z"/></symbol>
+  <symbol id="g3" viewBox="0 0 24 24"><path d="M12 8.2 18.4 14 12 22 5.600 14z"/><path d="M12 1.800a3.300 3.300 0 1 1 0 6.600 3.300 3.300 0 0 1 0-6.600zm0 1.700a1.600 1.600 0 1 0 0 3.200 1.600 1.600 0 0 0 0-3.200z"/></symbol>
+</svg>
+
+<div id="stage">
+<section class="title" id="title">
+  <div class="title-inner">
+    <button class="close" id="go-resume" type="button" aria-label="Back to the game" hidden>&times;</button>
+    <div class="hero">
+      <h1>Fallen Leaves</h1>
+      <div class="hero-row">
+        <div class="card h5 t0"></div><div class="card h5 t1"></div><div class="card h5 t2"></div><div class="card h5 t3"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <p>A game for two. Hold one kind of leaf in all four colours before your opponent does.</p>
+      <div class="choices" id="mode-choice">
+        <button class="btn primary" id="go-single" type="button">Single Player</button>
+        <button class="btn primary" id="go-two" type="button">Two Players</button>
+        <button class="btn" id="go-tutorial" type="button">Tutorial</button>
+      </div>
+      <div class="choices" id="level-choice" hidden>
+        <button class="btn primary" type="button" data-depth="1">Easy</button>
+        <button class="btn primary" type="button" data-depth="2">Medium</button>
+        <button class="btn primary" type="button" data-depth="4">Hard</button>
+        <button class="btn" id="level-back" type="button">Back</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="title" id="rules" hidden>
+  <div class="title-inner sheet">
+    <button class="close" id="rules-close" type="button" aria-label="Close the rules">&times;</button>
+    <h2>How to play</h2>
+  <p>There are ten kinds of leaf (oak, chestnut, ginkgo, elm, willow, maple, aspen, hawthorn, ivy and ash), each in four colours: green, yellow, orange and red. Hold one kind of leaf in all four colours at the end of your turn and you win.</p>
+  <p>The table has five rows. The far row is your opponent's leaves, the near row is yours, and the three between are the middle. The piles are at the side, one for each colour; the rims beside each pile are the leaves still beneath it.</p>
+  <p><b>Pick.</b> Drag a face-up leaf from a pile to your row. You may keep only one leaf of each colour, so if you now hold two, drag either one to a glowing place in the middle. A leaf goes at the left or right end of a row, and a column must be full before the next one starts.</p>
+  <p><b>Match.</b> If a leaf on the row of the middle nearest you is the same kind as one you hold, tap it to match along a diagonal rising from it. Its three leaves come up into your hand. Put three back, in any order, from everything you now hold; the match is made when the third goes down. You must end with one of each colour. Put them back as they were to change your mind.</p>
+  <p>Your opponent sits opposite, so their near row is the far row of the middle. You may also pass.</p>
+  </div>
+</section>
+
+<div id="ripples" aria-hidden="true"></div>
+<main class="table" id="table">
+  <div class="rel" id="reliquary" aria-label="Piles of leaves"></div>
+  <div class="board" id="board" aria-label="Opponent's leaves, the middle, and your leaves"></div>
+  <aside class="side">
+    <div class="words">
+      <p class="prompt" id="prompt" aria-live="polite"></p>
+      <p class="last" id="last"></p>
+    </div>
+    <div class="grow"></div>
+    <div class="actions" id="actions"></div>
+  </aside>
+</main>
+
+</div>
+
+<script>// Thronestorm rules, features, value network and move chooser.
+// A port of trainer/src/{game,net,main}.rs; tests/web_check.js verifies it
+// against the Rust trainer. Runs in a browser (window.TS) or under Node.
+(function (root) {
+  'use strict';
+  const XM = 40, W = 2 * XM + 1, NC = 3 * W, NONE = 255, MAXH = 12;
+  const F = 27, G = 20, D1 = 32, D2 = 64, POOL_SCALE = 0.25;
+  const CHECKED = 6, DEEP = 30;
+  const START = [[0, 0], [1, -1], [1, 1], [2, 0]];
+  const cid = (r, x) => r * W + x + XM;
+  const house = (c) => c >> 2;
+  const ctype = (c) => c & 3;
+
+  function newState(n, rand) {
+    const s = {
+      n, cells: new Uint8Array(NC).fill(NONE), lo: -1, hi: 1,
+      hands: [new Uint8Array(4).fill(NONE), new Uint8Array(4).fill(NONE)],
+      decks: [], dlen: [n, n, n, n], revealed: [true, true, true, true],
+      toMove: 0, winner: -1,
+    };
+    for (let t = 0; t < 4; t++) {
+      const d = [];
+      for (let h = 0; h < n; h++) d.push(h * 4 + t);
+      for (let i = n - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [d[i], d[j]] = [d[j], d[i]];
+      }
+      s.decks.push(d);
+    }
+    for (const [r, x] of START) {
+      s.dlen[3] -= 1;
+      s.cells[cid(r, x)] = s.decks[3][s.dlen[3]];
+    }
+    return s;
+  }
+
+  function clone(s) {
+    return {
+      n: s.n, cells: s.cells.slice(), lo: s.lo, hi: s.hi,
+      hands: [s.hands[0].slice(), s.hands[1].slice()],
+      decks: s.decks, dlen: s.dlen.slice(), revealed: s.revealed.slice(),
+      toMove: s.toMove, winner: s.winner,
+    };
+  }
+
+  function handWins(h) {
+    if (h[0] === NONE) return false;
+    const a = house(h[0]);
+    for (let i = 1; i < 4; i++) if (h[i] === NONE || house(h[i]) !== a) return false;
+    return true;
+  }
+  function handMask(h) {
+    let m = 0;
+    for (let i = 0; i < 4; i++) if (h[i] !== NONE) m |= 1 << house(h[i]);
+    return m;
+  }
+  function faceUp(s, t) {
+    return s.dlen[t] > 0 && s.revealed[t] ? s.decks[t][s.dlen[t] - 1] : NONE;
+  }
+  function openSlots(s) {
+    const out = [];
+    for (const sign of [-1, 1]) {
+      for (let k = 1; ; k++) {
+        const x = sign * (k + 1);
+        const before = out.length;
+        if (k % 2 === 1) {
+          for (const r of [0, 2]) if (s.cells[cid(r, x)] === NONE) out.push([r, x]);
+        } else if (s.cells[cid(1, x)] === NONE) out.push([1, x]);
+        if (out.length > before) break;
+      }
+    }
+    return out;
+  }
+  const evenStart = (lo) => lo - (((lo % 2) + 2) % 2);
+
+  // Complete lines as [p's bottom cell, middle, p's top cell].
+  function lines(s, p) {
+    const out = [];
+    const b = p === 0 ? 2 : 0, t = 2 - b;
+    for (let x = evenStart(s.lo); x <= s.hi; x += 2) {
+      if (s.cells[cid(b, x)] === NONE) continue;
+      for (const d of [-1, 1]) {
+        if (s.cells[cid(1, x + d)] !== NONE && s.cells[cid(t, x + 2 * d)] !== NONE) {
+          out.push([[b, x], [1, x + d], [t, x + 2 * d]]);
+        }
+      }
+    }
+    return out;
+  }
+
+  function finish(s, p) {
+    if (handWins(s.hands[p])) s.winner = p;
+    s.toMove = 1 - p;
+    return s;
+  }
+
+  // Every legal move with its resulting state. A claim leaves the next relic
+  // of that deck face down; call flip() on the chosen state to reveal it.
+  function successors(s) {
+    const out = [];
+    if (s.winner >= 0) return out;
+    const p = s.toMove;
+    out.push({ s: finish(clone(s), p), m: ['pass'] });
+    let slots = null;
+    for (let t = 0; t < 4; t++) {
+      const c = faceUp(s, t);
+      if (c === NONE) continue;
+      const held = s.hands[p][t];
+      if (held === NONE) {
+        const n = clone(s);
+        n.dlen[t] -= 1; n.revealed[t] = false; n.hands[p][t] = c;
+        out.push({ s: finish(n, p), m: ['claim', t, null, null] });
+      } else {
+        if (!slots) slots = openSlots(s);
+        for (const played of [c, held]) {
+          for (const slot of slots) {
+            const n = clone(s);
+            n.dlen[t] -= 1; n.revealed[t] = false;
+            n.hands[p][t] = played === c ? held : c;
+            n.cells[cid(slot[0], slot[1])] = played;
+            n.lo = Math.min(n.lo, slot[1]); n.hi = Math.max(n.hi, slot[1]);
+            out.push({ s: finish(n, p), m: ['claim', t, played, slot] });
+          }
+        }
+      }
+    }
+    const mask = handMask(s.hands[p]);
+    if (mask === 0) return out;
+    for (const line of lines(s, p)) {
+      const ids = line.map(([r, x]) => cid(r, x));
+      const c = ids.map((id) => s.cells[id]);
+      if ((mask & (1 << house(c[0]))) === 0) continue;
+      const pool = c.slice();
+      for (let i = 0; i < 4; i++) if (s.hands[p][i] !== NONE) pool.push(s.hands[p][i]);
+      const m = pool.length;
+      for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) {
+        if (j === i) continue;
+        for (let k = 0; k < m; k++) {
+          if (k === i || k === j || (i === 0 && j === 1 && k === 2)) continue;
+          const nh = [NONE, NONE, NONE, NONE];
+          let ok = true;
+          for (let q = 0; q < m; q++) {
+            if (q === i || q === j || q === k) continue;
+            const card = pool[q];
+            if (nh[ctype(card)] !== NONE) { ok = false; break; }
+            nh[ctype(card)] = card;
+          }
+          if (!ok) continue;
+          const placed = [pool[i], pool[j], pool[k]];
+          const n = clone(s);
+          n.hands[p].set(nh);
+          for (let q = 0; q < 3; q++) n.cells[ids[q]] = placed[q];
+          out.push({ s: finish(n, p), m: ['plot', line, placed] });
+        }
+      }
+    }
+    return out;
+  }
+
+  function flip(s) { s.revealed = [true, true, true, true]; }
+
+  // Could p win with one move from here, using only visible relics?
+  function canWinNow(s, p) {
+    const hand = s.hands[p];
+    for (let t = 0; t < 4; t++) {
+      const c = faceUp(s, t);
+      if (c === NONE) continue;
+      let all = true;
+      for (let u = 0; u < 4; u++) {
+        if (u !== t && (hand[u] === NONE || house(hand[u]) !== house(c))) { all = false; break; }
+      }
+      if (all) return true;
+    }
+    for (let i = 0; i < 4; i++) if (hand[i] === NONE) return false;
+    const mask = handMask(hand);
+    const cnt = new Uint8Array(MAXH);
+    for (let i = 0; i < 4; i++) cnt[house(hand[i])]++;
+    const b = p === 0 ? 2 : 0, t = 2 - b;
+    for (let x = evenStart(s.lo); x <= s.hi; x += 2) {
+      const c0 = s.cells[cid(b, x)];
+      if (c0 === NONE || (mask & (1 << house(c0))) === 0) continue;
+      for (const d of [-1, 1]) {
+        const c1 = s.cells[cid(1, x + d)], c2 = s.cells[cid(t, x + 2 * d)];
+        if (c1 === NONE || c2 === NONE) continue;
+        let hit = false;
+        for (const c of [c0, c1, c2]) { if (++cnt[house(c)] === 4) hit = true; }
+        for (const c of [c0, c1, c2]) cnt[house(c)]--;
+        if (hit) return true;
+      }
+    }
+    return false;
+  }
+
+  function top2(v, live, n) {
+    let a = 0, b = 0;
+    for (let h = 0; h < n; h++) {
+      if (!live[h]) continue;
+      if (v[h] > a) { b = a; a = v[h]; } else if (v[h] > b) b = v[h];
+    }
+    return [a, b];
+  }
+
+  function features(s) {
+    const me = s.toMove, o = 1 - me, n = s.n;
+    const z = () => new Array(MAXH).fill(0);
+    const hand = [z(), z()], face = z(), hidden = z(), realm = z(), keys = [z(), z()];
+    let nFace = 0, nHidden = 0;
+    const deckHidden = [0, 0, 0, 0];
+    const isHidden = new Uint8Array(MAXH * 4);
+    for (let p = 0; p < 2; p++) for (let i = 0; i < 4; i++) {
+      const c = s.hands[p][i];
+      if (c !== NONE) hand[p][house(c)]++;
+    }
+    for (let t = 0; t < 4; t++) for (let i = 0; i < s.dlen[t]; i++) {
+      const c = s.decks[t][i];
+      if (i + 1 === s.dlen[t] && s.revealed[t]) { face[house(c)]++; nFace++; }
+      else { hidden[house(c)]++; nHidden++; deckHidden[t]++; isHidden[c] = 1; }
+    }
+    for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) {
+      const c = s.cells[cid(r, x)];
+      if (c === NONE) continue;
+      realm[house(c)]++;
+      if (r === 2) keys[0][house(c)]++;
+      if (r === 0) keys[1][house(c)]++;
+    }
+    const lns = [[], []], usable = [[], []], reach = [z(), z()];
+    const seen = [new Uint8Array(NC), new Uint8Array(NC)];
+    for (let p = 0; p < 2; p++) {
+      const mask = handMask(s.hands[p]);
+      for (const line of lines(s, p)) {
+        const ids = line.map(([r, x]) => cid(r, x));
+        const ok = (mask & (1 << house(s.cells[ids[0]]))) !== 0;
+        if (ok) for (const id of ids) {
+          if (!seen[p][id]) { seen[p][id] = 1; reach[p][house(s.cells[id])]++; }
+        }
+        lns[p].push(ids); usable[p].push(ok);
+      }
+    }
+    const pool = [hand[0].slice(), hand[1].slice()];
+    const safe = [hand[0].slice(), hand[1].slice()];
+    const potential = [hand[0].slice(), hand[1].slice()];
+    for (let p = 0; p < 2; p++) {
+      lns[p].forEach((ids, li) => {
+        const ok = usable[p][li];
+        const contested = ids.some((id) => seen[1 - p][id]);
+        const cnt = z();
+        for (const id of ids) cnt[house(s.cells[id])]++;
+        for (let h = 0; h < n; h++) {
+          if (cnt[h] <= 0) continue;
+          const v = hand[p][h] + cnt[h];
+          potential[p][h] = Math.max(potential[p][h], v);
+          if (ok) {
+            pool[p][h] = Math.max(pool[p][h], v);
+            if (!contested) safe[p][h] = Math.max(safe[p][h], v);
+          }
+        }
+      });
+    }
+    const out = [z(), z()];
+    for (let p = 0; p < 2; p++) for (let t = 0; t < 4; t++) {
+      const others = [];
+      for (let u = 0; u < 4; u++) if (u !== t) others.push(s.hands[p][u]);
+      if (others.every((c) => c !== NONE && house(c) === house(others[0]))) {
+        const h = house(others[0]);
+        if (isHidden[h * 4 + t]) out[p][h] = 1 / Math.max(deckHidden[t], 1);
+      }
+    }
+    const b = (v) => (v ? 1 : 0);
+    const live = [[], []];
+    for (let h = 0; h < n; h++) { live[me][h] = hand[o][h] === 0; live[o][h] = hand[me][h] === 0; }
+    const houses = new Float32Array(n * F);
+    for (let h = 0; h < n; h++) {
+      const ml = b(live[me][h]), ol = b(live[o][h]);
+      houses.set([
+        hand[me][h] / 4, hand[o][h] / 4, face[h] / 4, hidden[h] / 4, realm[h] / 4,
+        pool[me][h] / 4, pool[o][h] / 4, reach[me][h] / 4, reach[o][h] / 4, ml, ol,
+        keys[me][h] / 4, keys[o][h] / 4,
+        b(hand[me][h] >= 2), b(hand[me][h] >= 3), b(hand[o][h] >= 2), b(hand[o][h] >= 3),
+        b(pool[me][h] >= 3), b(pool[o][h] >= 3),
+        ml * pool[me][h] / 4, ol * pool[o][h] / 4,
+        ml * potential[me][h] / 4, ol * potential[o][h] / 4,
+        ml * safe[me][h] / 4, ol * safe[o][h] / 4,
+        out[me][h], out[o][h],
+      ], h * F);
+    }
+    const size = (p) => { let k = 0; for (let i = 0; i < 4; i++) if (s.hands[p][i] !== NONE) k++; return k / 4; };
+    const div = (p) => { let m = handMask(s.hands[p]), k = 0; while (m) { k += m & 1; m >>= 1; } return k / 4; };
+    const count = (p) => usable[p].filter(Boolean).length / 20;
+    const [mp1, mp2] = top2(pool[me], live[me], n), [op1, op2] = top2(pool[o], live[o], n);
+    const [ms1, ms2] = top2(safe[me], live[me], n), [os1, os2] = top2(safe[o], live[o], n);
+    const global = new Float32Array([
+      size(me), size(o), count(me), count(o), lns[0].length / 20, nHidden / 36, nFace / 4,
+      b(canWinNow(s, me)), b(canWinNow(s, o)), 1, div(me), div(o),
+      mp1 / 4, mp2 / 4, op1 / 4, op2 / 4, ms1 / 4, ms2 / 4, os1 / 4, os2 / 4,
+    ]);
+    return { houses, global, n };
+  }
+
+  const O_W1 = 0, O_B1 = O_W1 + F * D1, O_W2 = O_B1 + D1, O_B2 = O_W2 + (D1 + G) * D2;
+  const O_W3 = O_B2 + D2, O_B3 = O_W3 + D2 * 2, NP = O_B3 + 2;
+
+  function loadNet(bytes) {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const dims = [0, 4, 8, 12].map((o) => dv.getUint32(o, true));
+    if (dims[0] !== F || dims[1] !== G || dims[2] !== D1 || dims[3] !== D2 + 1000) throw new Error('network shape');
+    const p = new Float32Array(NP);
+    for (let i = 0; i < NP; i++) p[i] = dv.getFloat32(16 + i * 4, true);
+    return p;
+  }
+
+  // [chance the player to move wins, chance the other player wins]
+  function evalNet(p, f) {
+    const z = new Float32Array(D1 + G);
+    for (let h = 0; h < f.n; h++) {
+      for (let j = 0; j < D1; j++) {
+        let a = p[O_B1 + j];
+        for (let i = 0; i < F; i++) a += f.houses[h * F + i] * p[O_W1 + i * D1 + j];
+        z[j] += Math.tanh(a) * POOL_SCALE;
+      }
+    }
+    z.set(f.global, D1);
+    const h2 = new Float32Array(D2);
+    for (let j = 0; j < D2; j++) {
+      let a = p[O_B2 + j];
+      for (let i = 0; i < D1 + G; i++) a += z[i] * p[O_W2 + i * D2 + j];
+      h2[j] = Math.tanh(a);
+    }
+    const v = [0, 0];
+    for (let k = 0; k < 2; k++) {
+      let a = p[O_B3 + k];
+      for (let j = 0; j < D2; j++) a += h2[j] * p[O_W3 + j * 2 + k];
+      v[k] = 1 / (1 + Math.exp(-a));
+    }
+    return v;
+  }
+
+  // `after` is the position just after `attacker` moved. True if he threatens
+  // to win and every reply still leaves him a winning move.
+  function forcedWin(after, attacker) {
+    if (after.winner >= 0 || !canWinNow(after, attacker)) return false;
+    return successors(after).every((r) => r.s.winner < 0 && canWinNow(r.s, attacker));
+  }
+  function hasForcingWin(s, me) {
+    if (canWinNow(s, me)) return true;
+    return successors(s).some((t) => forcedWin(t.s, me));
+  }
+  function forcedWin3(after, attacker) {
+    if (after.winner >= 0 || canWinNow(after, 1 - attacker)) return false;
+    return successors(after).every((r) => r.s.winner < 0 && hasForcingWin(r.s, attacker));
+  }
+
+  // Index of the move to play. opts: { net, depth (1-4), rivalry }
+  function choose(s, succ, opts) {
+    const p = s.toMove, { net, depth, rivalry } = opts;
+    const win = succ.findIndex((t) => t.s.winner === p);
+    if (win >= 0) return win;
+    let cands = [];
+    for (let i = 0; i < succ.length; i++) if (!canWinNow(succ[i].s, 1 - p)) cands.push(i);
+    if (!cands.length) cands = succ.map((_, i) => i);
+    if (depth >= 2) {
+      const f = cands.find((i) => forcedWin(succ[i].s, p));
+      if (f !== undefined) return f;
+    }
+    const score = (st) => { const v = evalNet(net, features(st)); return rivalry * v[0] - v[1]; };
+    const scored = cands.map((i) => [score(succ[i].s), i]).sort((a, b) => a[0] - b[0]);
+    if (depth >= 3) {
+      const f = scored.slice(0, DEEP).find(([, i]) => forcedWin3(succ[i].s, p));
+      if (f) return f[1];
+    }
+    if (depth >= 2) {
+      for (const [, i] of scored.slice(0, CHECKED)) {
+        const theirs = successors(succ[i].s);
+        let bad = theirs.some((t) => !canWinNow(t.s, p) && forcedWin(t.s, 1 - p));
+        if (!bad && depth >= 4) {
+          const rated = [];
+          theirs.forEach((t, j) => { if (t.s.winner < 0) rated.push([score(t.s), j]); });
+          rated.sort((a, b) => a[0] - b[0]);
+          bad = rated.slice(0, DEEP).some(([, j]) => forcedWin3(theirs[j].s, 1 - p));
+        }
+        if (!bad) return i;
+      }
+    }
+    return scored[0][1];
+  }
+
+  const api = {
+    NONE, START, cid, house, ctype, newState, clone, faceUp, openSlots, lines,
+    successors, flip, canWinNow, handWins, handMask, features, loadNet, evalNet, choose, forcedWin,
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.TS = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>// Fallen Leaves: ten kinds of leaf, each in four colours. The same game as
+// Thronestorm; a leaf's kind plays the part of a house and its colour the
+// part of sword, shield, helmet or trinket. You pick leaves from the piles
+// and make matches along diagonals in the middle.
+window.SKIN = (function () {
+  const KIND = ['green', 'yellow', 'orange', 'red'];
+  const HOUSE = ['oak', 'chestnut', 'ginkgo', 'elm', 'willow', 'maple', 'aspen', 'hawthorn', 'ivy', 'ash'];
+  const house = (c) => c >> 2, kind = (c) => c & 3;
+  const name = (c) => `${KIND[kind(c)]} ${HOUSE[house(c)]} leaf`;
+  const chip = (c) => `<span class="chip k${kind(c)}">${KIND[kind(c)]} ${HOUSE[house(c)]}</span>`;
+  const chips = (cs) => cs.map(chip).join(' ');
+  return {
+    kinds: KIND, houses: HOUSE, name, chip,
+    ratio: 1, maxWidth: 96, gap: 4, handGap: 8, rowPitch: 0.866, handPitch: 1.22, // circles pack like a honeycomb
+    ripple: true,
+    spin: true, // leaves lie at whatever angle they landed
+    badge: () => '',
+    slot: (t) => `<span class="dot k${t}"></span>`,
+    // the leaves beneath a pile's top one show as rims running out to the left
+    pileStyle: (n) => '--edges:' + (Array.from({ length: n }, (_, i) => `${-2 * (i + 1)}px 0 0 ${i % 2 ? 'rgba(10,18,22,.6)' : 'rgba(220,235,240,.45)'}`).join(',') || 'none'),
+    words: {
+      thinking: 'The opponent is thinking.',
+      dragToPick: 'Drag it to your row to pick it.',
+      yourTurn: 'Your turn. Pick a leaf from the piles by dragging it to your row, or tap a glowing leaf in the middle to match.',
+      two: (t) => `You now hold two ${KIND[t]} leaves. Drag one of them to a glowing place in the middle.`,
+      twoDiagonals: 'Two diagonals rise from that leaf. Tap another leaf on the one you want.',
+      putBack: (n) => `Put ${['', 'one more leaf', 'two more leaves', 'three leaves'][n]} back on the diagonal, keeping one of each colour. Tap a leaf twice to send it to the next place.`,
+      wouldHoldTwo: (t) => `You would hold two ${KIND[t]} leaves. Swap one of them onto the diagonal.`,
+      backAsWas: 'You put the diagonal back as it was.',
+      notAllowed: 'That move is not allowed.',
+      noKindYet: (t) => `You hold no ${KIND[t]} leaf yet, so that one goes to your row.`,
+      peekNeither: 'Neither diagonal from that leaf is complete yet.',
+      peekIncomplete: 'That diagonal is not complete yet.',
+      peekNoStake: (h) => `You hold no ${HOUSE[h]} leaf, so you cannot match from that one.`,
+      won: (me, h) => `${me ? 'You hold' : 'The opponent holds'} the ${HOUSE[h]} in all four colours.`,
+      wholeGame: ' That is the whole game.',
+      noKind: (t) => `no ${KIND[t]} leaf`,
+      emptyPlace: 'empty place in the middle',
+      faceDown: 'face-down leaf',
+      pile: (t, n) => `${KIND[t]} pile, ${n} beneath`,
+      log: {
+        pass: (Who) => `${Who} passed.`,
+        claim: (Who, c) => `${Who} picked the ${chip(c)}.`,
+        sent: (Who, c) => `${Who} put the ${chip(c)} straight into the middle.`,
+        claimSent: (Who, c, p) => `${Who} picked the ${chip(c)} and put the ${chip(p)} in the middle.`,
+        rearranged: (Who) => `${Who} rearranged a diagonal.`,
+        plotted: (Who, took, left) => `${Who} made a match: took ${chips(took)}, left ${chips(left)}.`,
+      },
+      hint: {
+        pass: 'Hint: pass.',
+        claim: (c) => `Hint: pick the ${chip(c)}.`,
+        send: (c, where) => `Hint: put the ${chip(c)} from the piles straight onto ${where}.`,
+        claimSend: (c, p, where) => `Hint: pick the ${chip(c)} and put your ${chip(p)} on ${where}.`,
+        plot: (trig, a, b, c) => `Hint: match from the ${chip(trig)}. Put back the ${chip(a)} nearest you, the ${chip(b)} in the centre and the ${chip(c)} farthest.`,
+        rows: ['the far row', 'the centre row', 'the near row'],
+        wins: ' It wins the game.',
+        stops: ' It stops the opponent winning next turn.',
+        noAnswer: ' It leaves the opponent no answer.',
+      },
+      tutorial: [
+        { idle: `You win by holding one kind of leaf in all four colours. You already hold the ${chip(25)}. Pick the ${chip(26)}: drag it from the piles to your row.`,
+          nope: `Pick the ${chip(26)} first.` },
+        { idle: `You can keep only one leaf of each colour. Pick the ${chip(24)} anyway.`,
+          claim: `Now you hold two green leaves. Drag the ${chip(28)} to the glowing place on the far row, on the right.`,
+          nope: `Pick the ${chip(24)}, then put the ${chip(28)} at the right-hand end of the far row.` },
+        { idle: `That filled a diagonal in the middle: one leaf on the near row, one in the centre, one on the far row. The ${chip(27)} glows because you hold other aspen leaves. Tap it to match.`,
+          plot: 'The diagonal is in your hand. Put three leaves back, keeping the four aspen leaves.',
+          nope: 'Keep all four aspen leaves, and put the other three back.' },
+      ],
+    },
+  };
+})();
+</script>
+<script>
+(function () {
+  'use strict';
+  const NONE = TS.NONE, house = TS.house, ctype = TS.ctype;
+  const KIND = SKIN.kinds, HOUSE = SKIN.houses, W = SKIN.words;
+  const NET = TS.loadNet(Uint8Array.from(atob('GwAAABQAAAAgAAAAKAQAAEutXD4j/+O9sV1bvmEQiT4O/Cw/hQCOvfeM+z3yZo+6IJJPPeWhOb6Cbos+UbA8vlP+Pj5Rv64+NOnIPsDLzbugOJ6++ZMnP3kXgz0Sahw+JSF6viW8Rb5iikI9PQnmva2wiD02ADW+KXbiPbFEwz7QKBa+/mhKPvpbnb7Ee449wOgyPDMf1z05IhM+jAglPu/WCz6X9gm/bgJIPsMGbr5juq2+a2Xgvh+/Cr+I6qe77J5xvTPKF77M/4w+eA7FPVS1cj6zeE49BAU0vvCk0b0dcjO/IzK7PcrYET57OwS+J4wUPl4Kmb6ffHi9Z5yqPm0Qoz61geo+AsV3vr3/ob69oKM8pA0Bv7emoD6ejRS+xS6AvtTdHr9MdK2+eqOXPpiBtj0TfJ6/3jFpv1cgiz5kWCw9nATWviD6OT6L1ks+KToJv6/FA7/A1CM+qsXjPSZW17+Lmv4+5cuCvTqm1L1W9wy/2wAvvt9gAT9iqze/y++QvRyQuT3M+4O+DY+Mvin2y7271wI/HutNv8F8Zr2Cfyw/Rd7nvQg56D7vvrK9Seh0vlk0H79t3hk+dOLAvWw84L1bwgM/7hCUvfw4P77ikss9F/vEvpNIGz/pb32+snF/vwEF9z3LYvk8lfnRve5mUz6L29E9MwFdv1M6Wj6BKAZAwHi4vqWysT4SE4c+0zq8PdiZEL6uqOs+2aS9vkz6g76BFtg+oKwXvseRH76Qycc+1T9KvoaxEL5CWxW+O0z0PStQur4UmQq+kjkbvtnzCr5gVa4+t97QPavwmb4dQrm+NaU3vUjMmztgSxI8LNJWva50vr264ZI+R3b1vhBwi77NKTu9Kmd+vhNQuT3THNq+WHVCP7/Nmb6dQ/M+zVZTP0gP8D3pkxA/g5e9PdfQ7L5ERAy/XDr8vph+AT5kmIu/1Di5PQUeBD5IVAE/EaV2Pvs4Xr/v/8M+rpSXPQ5S57+jNIQ9cVxnP5dIJb6fPIo+rHSYvnIymL6HIvU+UpmhPwmSYj5C+fi+bCD+PqxPSb5mrMk9aSMIPcxV5TsR5nQ+DVyevuiEnb4wSoW+CQxzvjhMq76sc/s8VP+hvO0vgz1ih/I8dIU6vVj1hTyr4pS+3Mb+u7jSnz4ngJO+F4aAPCFClD2gRpK9JTTQvSFmYT7yBC8+2RNPPlqQKj376sQ9vAlDvrnsKb5NO3a+aBQ2vni7pr0PeHc6gi3avgwffz3cw32+2oYiPg7xQT+jHp29ZuwDwAfhhb+MgHw+WFerPcopWb8DoFq+GB69PovHDD+ANQK/RhaCvxFERr2doRTAUxErPaqG2z41dEy/RxsNP9VISb+pLBU/layKvgu87r4xigo/jfUAv31SO7/ZNvc+QQtkvqD9KT8llQc/R5SmvuaPDj7moZq+KjqhvnY5Mz28yPY+0wHbPq3rp74DZZE8oDv8PRc/9L7b4b+8o3OWPh9DHD6TWWk/FIYOPgQTkj5W7IA+Z61nvn3FqD4MPS2/a76EPjBtW748w7u9BDi0PkETvL5X4BU/QEwIPwjerL0IXNy+FW0WvicuM74GHmM+L5LGPi0TFr4QLD0+/mQJPcDH2b7J8b29i0yLvIjD3D5lp9c9acVwvRiOlLzjxQO+Gha1vkrXlT5pVhY+84EdPV8yN702Uw+9CbgVvB9Rpb7XlsI9rMMsPOgwyb7/dQk+yQkpvmo+6T0qURo+G+XXvb3d9D1WFIO+E8JYPVxEFj2h6bY6goi6PJZ49zwDIug9+3bAvjLrpL4xzyw9iza9vu1Aur7660A+m+W9PTavSz7ScT+/g/nyPQ92gT4SfuO+t6zyvTb8G77fakA+jGKxvYoHlj5GCAC/+ROaPKEbED/wv8A+mZ4YvmaiQz5mq2S+Bcfuvb4sZj4P+Ak+TdcHv6lbib4E6ii+P973vHsX6LyO4CE/4f6RPqNbCz5zVJ0+/K/8vlFLgz3gUp++3npVvduljz4gxZO++sUWvAeRIT/uTtC+RwKtvVUcz70ILmM8I1n7Po4o6D6JlY69yuc/vx5iuD7ecp29qCq2vq+NAj/TR62+MAolP5bXrj5Lyvu+QfpoPicIxz05xIG9L1LzPGee7z7iJiU/YmQIvlJZFD4j4NM7auDaPeriP74dNdS+9toRPxor9zxYVSA+DQItPpqCBb2Xdo2+oCGIPj5slL67faQ9Ht35Pn1mLr7Loo2+RYwDvsVuAj/aFLo93gC6PPNELb4xwmU+MJ5+vivg/b4lEgW/WgaNvpxZMD5pML0+1ITCvYyM8r0YQic/b3WLvakvmr2p7GS+qk6mvtOwMz5PXVg/ElaUvnyLE74oIJ4/romiPaREyz6WsCy/oSiHPqsppL7/7xM/31MBPY8ch76OxZI+dT0uvk7HlL6sNoc6yhRpPUj60z7Nd+g90AwEvlqKsb4TuRU+AxnTvU4JFj8DFZU+MJRRPqwY8D4UVXy+BDhSP1ImSL5sCgq+LoLtPkgI5j5447S+wXE3v62tEb56960+R9S8vB5/jb4+QK69T0p+vpxPHD9yQS0/xBLXvr+Gnj2ScL++b/ISv/8p3bqa2p4/TPk6PwyRbD5unoG+D/zYPGPO4Lw6dqS/6IN+PuLItj79dfc/oPX4vRXd1D3IywK+HP4pPkiltz9B0oW+kRyZPueW777wP+o+H9qfPsY6jr6R6RU/2BuavYbIlr1B0LG/RkgbPlxg0L1adPS+vnnHPN5WIz3Ho4C87uK9vf6NMD/6CEFAhKJevkUOLb5FQoa/S7rEPPEcP8CjC46+UtwNP1zCk0Aj4YG89s0fvqEiG7/WKw3AMwgCQF0u1Ds2gSq9vKkxvuEYCr/Ks9U+Yrb0PqBIMz4LKp++xEcLvnGK+b8VWHa+slGgvsh6qb35Z0E+eBOIvHwfxD6fC5y+hdAlPHQdpT4tXwE+uc5uvoYY6j1LblQ+72ljvhviH75XFqY/fQOaPqODib32jg4+QzlVQGZjTD5jf3q+jakGvoBXpz4NVmY+jfL7Pvf70D7VyaG+VyAEPrbFn7/gXt2++KvrvhADE0BlZe0/+HSXvsC5rbyMYa0+A2qoPSMtw72nv20/N3WqP/NXO74+mi4/+B+DPXYfBT0hxHy+W6h8vgKhVT0xeWc+0lWrvNedMb6wgSi+o57MPWc8AD8EOBA/IvgTvqixpr7a6cA+7tloPijzyz0m/KK7jsWZvci/Gj4NxBC//RvIvX40or6Usoq+5g69vb6hEDz3Rjk+fejPPboEOLxlVUQ9+pejPcIWFz97n7G+qpf3vhn3RT7juMw+4NSQPtZBtbsJqAe/4gmzPqydjD7Unpm+J+NQvo8zdT3vZZQ+Kn+zvSiMtb78UIc+URI7PukWij2VbTU+ykeqPiMR+L4yYGQ+57tlu4rMdL5I0Vq9XekUPSI3aL6cr6Q92EeZPWg1sj5TY18+i5mFvkxu6j1LKok+5xOGPuqZyD6NWNA+4jSAPq/Ydz6lgI8+ark9Pm5RKjzpp0w+ID1wvTHdDz6aStE8iySxPiW75j4SpAA+h+V6vltZtD69DCS9809YvquXHD5Fwps+IFFEPK/MA79rTGs+nbB0Po1JBj6ZMlm+cJDAvLHrs72MfDA+HpyQvULFa74zJp69VUOtvckgOD5WwHg+ZpFOPnS+Er5KNSq+8at9vADOVb0vQxU+32xyPGT83r5JDh+/wQxLvJNsUT3sqpo8/sOPvuYFILz3VWg7K6xcu27NBT4QRkC+fXKrvY8VfT77vr29ZY+JvbEznT5jswq9OUCiPIIkIb6c+2M9KT8vvPlnEL47pMY8LFiVPfrdVz4sp9U8QO+JPnQzCD5cdg4+yyCAuwocGr4BIKg8zpKFPvDGuT1nTzg+MPFEPj4dur6rUqY+voYLPX/Cir38x009sc/nPAQRV72DSEw+cSrMvVj2mL7DMAU/YT5bPm9+wD4gzGW+omjzPqm/qL6UGFm81fX2vj2RqD3D5b4+a+qcPon8ij5XUci9vvqAPVWckzySnDM9ECqRvroZtT7F2oQ93hs9vsfL6j60Jpc+RrwFvrRsmrzT5KA9GI8bvpUFhD6DGwA+YLmJvgSt8L5fRug9M7AnPafVEj3PGko+we6aPXsl+L4uxtS9w9jjvlqRSr0TYVg+EgjePXm7Rb5zEyI/96QqPP3IUr0yhZA+jgNsvsfAcb6dpQA9K3nrPqRnzr2CSdW+5vkzPp5nd75ohRM9bmg9vpRDLz5n/iu8JHcWPztnqD5FORy/CyxRvgoIpj3Ryta+D6M9PEmswr7kUTy+I8Xhvsh4jTyk+fU/6iqWPx2iRb6NL5C+UpYNvtxjKb+QZC6/ZnHqvtv1vD3L3CY95osLv9ZtrTyt5uK+vy1ZvpcHqb59+62+nSaev/VOXj7Rb5u+F4dcPon6uD77X5m+WkKDPswNvT7NEjU+5PnOvmXxBb5Uocq91h4NP3CSNj783Lk+a18KPo8RCT9vOqq+IHpNvmbQ4L31T/O8CVfZPaFUVz7dinK/D1wlPWnRnr1EDRC/R2tmvtHwv77PQRO+3yFYP1xpTT5W/fK/+zS9Pu9Mcb5aa8O982uRv9MEyz6ukm++fRJCvLXjwD7PRJm9lJYGPRfJ1j3q14Q9MeXhO9MThj16qIk9XmEkvXhRyrowJLc785mtvbsRlr4w/I+8HbaHO0lXMjz7T7g9tuJ2ukuvFLwV2Ka9UWWCOwTwFD4mKkI949e9vkpMl71pZd08GJTnPJwBCrx+IMs9yXmbvImWszwHXuY+W1RnPDwJjTygy2w9QwinvQrpnj191Rk9oPwkPSqvET4GB3q+eVI9vpn27D1QQ4W8c3ETPwMdYr54qTQ9DBM0Pnu0YjzQTQ09H6/ivjwvmLyBNhc+dYdZvo1HRj7Iudg+UDqWPg9G570/TZY+ms1Qvl/lqz4SfGA+aD3cvSc9fT5gwrA+NEMCvDaj5j7HXda95I+8vU+Fhr7AtIa+TfWiPbPdmD0aPUA+DDiUvmJxZb2OypU9I+WUPs0dlL2+o6s8KAEWvSayCL5V10K+d3O2vb0fGL487Yk9UzOHvr5TpD6S8Qa+nfhFvmrGuz6NjKy7gN7KPpODaL5oym68nss3vgr5Iz+WRrS9dYCcvboHlz6LUs+9IWY6v09g5j4NgSM+IybXvs6xaj3IaMC+PzmOPNEqmD/CPDI+euDDvs8EST8O3gq/FfMBv9JWrb65Xxi/OXukPgUJ4D4wsmc/eEsmP36mCL+HQC6/7h2/vskLFr8NGQ0/YKEAP0PmCT5p0jE+koOcPhAJHj5JtVM/Q0TFPd775z6FJ2+/SJ63PSTAy76Etr++bdOUvHpgkL29hS6/SUM7PmVMzz7uiiq/huCxPCOS2b5pJ/m9jMvOPaFMpD0ZPQm/ho+2vUk3A77+e48/mQv7vpHVpT53y1I+8zKqPt5oXr6yGj2+QnxXPsPkRz0pYBQ/1LFdPltn9r6CfBi/44d3PrsXqj62tQO/DyEVv42C8T7kjya/cQahPou1jT4+Uoa/hLJ+vqR0Jj+PWnW/gaL4PsmTgD8MARs/R1iVPtX3XL33lsy+m4uKv3dBh78Yxig/OS60PvNdFj/yiHk/kmmUv7ieUb9aMA2/RkE0P9+Sgb5slzi/4vZqv4FR4L1aprK+5Ht1P3rZl74vFhk/9jFxPoxlBz9xto69kp8BP3T3kr7t8tu+2lYsPim74b0T8go/AYWovRX4cb//lSS+Zq1hPIDBMz84K+i+RIiAv1go8Ln+mtu+3k07vwZeND+OxgA/qpGUPYRacD3IR04+r7WKv9HwS79gZkY/Taaevu3FPD5l/YY9M5nrPRlgYr5/UGi+I/4dPtBHOD53fAi/pmXNOyditLp7psM+o6tePvlD4jz6+ko8TuVyPhm5gj5LYGk+cgMwvx6h17x/gZY+fj80vrVoxzxoSCe+PXs3Pjk/lz7PZnG+9CHrPjVNX76PmXI9XX8vvaFagL6f8yy+IJZJvYtyeL5GCU69ttuFvXwtbD4/8+Q8YS5mvnRsSz69Uq6+mZzDvKPsGj10E9A8Lgt/PiOHer74AZA+8xEjPvH7V76FT5Q8bRIjP1mu1j1ymJ09vzuAPkfbvz2N9pk8fhXXPbgmND1VYcO9BwNvPtdV7j57LgS+eegcPRtlIL5uFbA9foCPPrRTkL3VUZC+HgjYPYeaMb66gC8+qN6EPUS5ir5vp1C+1hpRPtyFdr53baE+9JbePr9w0T4nh9E+4pJqvoAxFr70FNy+gF2Qvu+myj6krTM+EDzQPZsqlj4WfDm+1wWNvpImMb5Gz0c+k/FFvr3KZD4hhYC+FFPovaJcYL5oOb0+AXJhvgKbST3sCYg+pVhePsH6cT3jNhQ+l0IsPtKOT76d9gU+bMqdvpbL/LtmP1y+LAOUPWHx4Lxyqks+H9GBPkoFlz2gKvS+yRRbOt4/Fr6HiVe+oIAUPu7ybLygoAa+WNSKPmm6ZTtcOXi+zSY0u+tLxD7bW5w912IvPqOxpD5Catu9ZkIwvgh9LT4mDOW+7ubBO1+c5j5dC5M+c3p3PjV77T3505k9qnmOvq3EwD4wJHG+mcSJvq+xGL55HYw9F+QfPsomKb5qP9q+gzmovqCIBT4ib6w+TZSIPXqCGz5a3oA+u4csvtB+Aj5ExEo+7c1jvQ6Fq7zMT24+SABEvrc4Nr5YSnA+rWyHvBuaUL7gY8+9Er9pPqXphT2EQ6S9MnafPVqEab0t3CS+hrREPAmIJj4uNZA+VG3dPWC/Uj52hMy+G5DOPrhpbb5gKLc98q02vnKXK76tF1a9jNEVPWHhLT5ZqD29Mk3dPsisXj5ki+W+rqQCviVboj4gN24+HKuCvkpGfb7PFJc+2Xz+PJpvnL26rjy+jQ5vvkezVz4d/g0+uobAvvaZrr2waeI+KTPnPnPMoT5kPy+7Dt6MvuSuAb4QeQi+PLhnvugVBL3ASaW+JA6fPkw4db4NQwg+pHJUPjkxpr5dRwI+9YgjPv8SRr0EWd887oBNPdvd0z7vKZ08GXmMPX/wsz4rN9S+nH7ZvdBdNT5u4SG+98FGPTMhxD5GNyi94zflPXsVDr5AS2o+r4aIPI6bvz7i3wq/N50UPxSEqr44+fs9knXwvEBmYb7gpDM9qQ+8vdaXNr5xQiC8TRuRPqSlqb7HIV4+2ePqPuOTIj4qdJy9M5erPUgPsT2+K8+7FH3MvYpleL5oWEo+cIyWuzZegD7law4+mO7gvcFDsT7lFD6+cOwyPnNFqj0U1bW9EYyhvsAkNz47O78+d9eTPsTkVr3uRpO+729APvS33r20Eac98yIivim0OL58wLE94suTvbx0ub5Gx/Y+NCw7vrzpljzNIT++gxiDPfbmSb64loi8SYzQPj3F/j0tXCq8G857PjJ2Mr2KAaY+wZedPPdS9L0fV4C955UCPdZrwz2hafs9EaiNPskmCT8m8I8+LpD+vUQFvr6+Q987dTXaPLVHN76wtoS9v8ymvvQjub3lwFC7Ix6ZPgaOor0krXK942oDPlOzjL3pYbq9tipQPSWvGr9xiu49FZGfvW1/FT5HVAQ+MNUDPrpmUL5MJm4+21+cPeqBK765AC2+TsekvmU2z72W0DY+k4Q2vfTplT5/7uE8sHDiPcxTJj6LU3m+ZYeOPR5jaj5h4Eq+WQpDPtwcyLxVK+q94CzHPmSiiL7rpQ2+tJaKvh1Ixr6Gdwq+GFy+PTP1TT5MDY6+el+QvsjBkb5qdV6+qUpYvl/ZmD1UJo49XnXiPeG+cr7UnD8+tRgSvn03cj6Xh5q+enrKvHy4f72J1WS+9n+7Pp44hD68TKc+sbCnPd54573Q8cw9NfmQPj2hhb7ur4++h8uNPvpDhD1eIiw+bxZ6vedIqT4XJ/C+7OfUPsR9pb46uki+FYsHP0RqkD5Sfr2+1BBGP5G+6r4fHdS+BlElvm/AQz6wSY08WPUcPjnVIT/aU1w/92e2vkQ1sL6fpKa+3LzBvmpkzz4nsk8+5YXIPp51UL5Si6s+t/2sPi+hRT+m12O+efx2Pr3vPb9+0F4+26M5PgUyYr56vpi+szeCvuH8/b5qEim9VfSaPo8kRr4lh9Q+SsabvuB7BTz/M0g+y+eYPlVTrr7KSka+xgnDvDGtED+Rz7e9CT5lOyFpzz6t0XW+866zvhJuh74Mofi+zxJ5vadd/D7q8oI9pLEgv32aDb6D2TM9rVIzvaUemr1Tj4o+9T7bPdb9Yz4zz0Y+5PMNv2dAq7+KJm89crsUPl4S1r/sw7M+1ML3Pjqjmz4fcEQ9Ff5OvvO+Gb4oE8+/Y5CgvxvZ3T2jiF4+7HAYPokHwD6v9NS+tZ3bvfqs2T6yzAq/2cQFvkrdfD6C/4m/zNuuPS1NrL2vurE/fc4DvjaWNj7T2Q+8LXY5v+xTWz2gXBq+BkjGvm92B77SOju+i4XHPMWctr0+Vkm+oV7dvXNq8T0CrG6+m8vYvpWTmbzpcse/SIW1vbJvBj+1pai+NvjrvrC93L74M4E9GvKFPro0XD1oI6C/1BE9PuPUAD/2haI9loQ5vaE0RL5V8Eg8DiZ1vvvQFL+KkU09NPxPPpLhWj7C6m6+YaFBvhh4Zr40FAY9VSeEPGMtBT4QHZk+PIw6vjEgYj6EtTQ+BlhQvmQmJr1IguS9RzD0vcR1sT0VqUw9Oth1vuhR770DL6G9t+/HPdVNfL7bPwQ+cLwNPTwVXL4EX5Q+ntHxPU2fmD2u0jy+fCnFvbhqRr7W4ak9kmahvXy6qD2HnTu+lLANvqsxZrxxJQo+QJO6PZlgir4K+te8OJItPpLc/runc948a0oUvrgxSD7Lwq48nNGgOssO+b5eRCs+A1n8PUzlmT11rpS+ewsSvuGkY704mRe9ynSxPjopib427jU+Ei1IvmqYlT6W14k9fZkKvz4NlL2jezg+RAQVP3AXBD8n+rq+73VWP91M0bvZS46+Ixx7vj05PrzZQW092NW3PrGxFz8eOxU/yTi0PSXY/L5aG7Q+HoCevotoKT7/szS+aKu/vkUD3j419ps+sPJKv+uZFT427kC9RhnzPg6NUr9ebOU+SldkvPvVxL6loec+KUGpvO8lET7c8YQ++TslPmZt6z05Kek+XBuRPcQ4Fj1CxUu+CZ8PvKfHzL1olYk+o6cwvZsxTT9N9I0+A1UGvzS/hz4nTgw/194lvLcbbb7ox4U9JIEFPae4OD85bi27rJohv4H6rL5GQYE+vW8KPjUKfb7XtJ2+A8wRP+Pot77kXoY+A09VPgyFLj1i5aa+qMaFvQCxaD1vQBA/fzuwvftgKT4w/zO/p2dkPvw8FT6fNtg9vJ8HPjNMHD+VO/I+5C8WP/4PAj7yWgs+HUwQv8PdD7/eoUE/19p6PcRkZ79vzGW9VgIPvsPf7r4G/02+E662vXYHC7+ifX8+4mpgP+/CXj4uCw8/uAe2vhEM3r4WHpg9h37WvlFWAT+yqLc+v1MTv26JBb8GSgc+DHhSPwDTMr6NLjA+UgClPSB6Fb9+ewe/JGYIP1V+KD+KLsM9kHVSvuP59b1b6dc8B0oXvw9izz68HH29M7RbO7BUsT0ZLqq98VNyvpS4nL46wJU+OmvVPUaRrz3Q4IG+TyhNvlF4uj3N6eu933wSvpCMDj7EkxE/wdWyPgm0vb7H3ZG+Nbl0PRp8Hj1IU5y+6LiuvYb8Yb7XbpA9pZqxvelK1T6jFBq+rhU8PR40wbw7LLY9IJyvPc9kCL5E6Z0+OLn/vIeGa759Xwg80pVFvh1BKz6T1Ci9ZjvaPbrJQD6LEOE8tOFrvh//rr3aZ5C+EVWFuzayHj7+3Ju81AHePYOCnD35OBk/C8gBvbAbIb6oxHO+EMicvs6Srb5ibFe9CJtGPRBAQz6Yy3c+2hU8vs4bpL2ns/I91WmOPjzpXT1hdsa+5JVbPkxcuz0a5YU9PkHgPe5Xp70bJrS8E46KP7TAd77fFC69C0h5P5cFir3XgDq/yx/gvDaOzb4IZFU+lC8MPrnahz8IyoI+FOkLPa12E7sbjNu8sL3XPchqGz/ExkU9Ty+rvll9FT/udAS+BZwKv5LCRz7PHOy9QQoOvnbYX78ikg8+5MPwvFxtL70+DLA+3nczPjEYwr6gW5E+hRSJvOg4g77GzNK+PAMlvZFwvj2JpOq9r4qzPco/S75Zq20+c+MBPqqkYz9nQmk+aPUAv6qjMD8EFUo+X6T3PRCRV700maS9EfIzvfmjLD+Fw7q9LU4Nvvxz+r12HUC+i4jhPm9aEb4FH6Y9Cf6JPPM6SD6pgxu9f29uvicBVz4MfHU+H5ryvWmvj77QL4A83RIyvBpv4772Ku69t7MxPUhNt704stC8tiLLvqXvfj1a3aa8E/xLPHYFTD5iM3Q+XrWUvvP2dz7UPUe65KHYPE0zi76yGXK+FB6JPZ+rhL7XSqM+MU+QPURLJD7kNLw8LSCTPlSNfj4d7j89UwXnvk/KCz7KcPY9C9KFPntgBT7PvNs9zQtaPsqq9T3Rjw88LWTBvbrnHb1kOsS8OASDvSNtXT6BtJ4+/KdJPtL+ND6/nZY9kDMgvgsWNL4T7xk+ZlBZvrIy6j5xmvS8cCCdvStqTb6ZxXy9OzJHPu08iL3UeFw+EMQTPSYoWT4W/Lw+L97avWZJFD6Xe18+Awu8Pab7Fr4xGEU9MFu2vfFvPjyhrMs97bnmPrlAbz6PkZc8K9AXvKF3iT4H88S+mhLOPoEtZL6WJfq92tkJPuO0ET7r5ZG+bvetPm51hL3wm0a+jhyRvnOimz0xp2o+NGu2PcC8XT6ARzs+3DIVvSOVQD5V5WC92yhDvA9d1rs4vCs+sJSzvYNrsD18DD48MfcPvj7fLz64i9Y9DFbSPr/VZr0tf/A8xQkNPt82pz79Gbk+Nu5VPt3W4rwwzgg+aNC2PuRGE77YXBe9vWnDPopnnL69YB2+jqT0PboskD4k0qG9eAcUP7zea77HJsW+jBwYPHl4E7woXlk+sWosPGiEyb4RL6u+J+UgPmktnD4vqh6+lajuPTkAQj4FDmi9P6wAvyM17b4aVMS+08A8vpNTBD45r9U+Il+LPdORJ76ep1U9dnMEPyJt0j1orbC9X5d2PiDeiLzKQ7S9svsgvTRNXr7CeW6+kF2nvuiIu75Ra84+bAdfPn8Sf76pu58+rEWJvmDxc73E7do+FcLOPpUHrr45JC6/jPWFvd0Phj6hHFg9MVScPnXY2z2g/Pa+fg2yvqzU0T0eVZ8+CBRYPP/AP73XRjU+9AWfvq0coL0N5d69SJIGPs5x6j3Jqba9A/h/PdupnD42ZdK7k4jNvq/vi73h1nm97zQgPgE3kL2xxkM+7W2lPtSwQzxERqA+wmmMvtuP9L46cj6+Nw8ovkabhr4diNW+XxtBPkRpLj6YK4m87gPVPfAhnbxZCMG9izTIvSR5Tr0MHw8+FGIqPLCUYT5R5mA+vmCyvVF78zygBSi+w5vNvUs/CL7D2w8+EByJPuKiLT4uVFq8inc8vkmN7r1fBpS+J7eJPTTjO71Zkv08CTNePgeNyT3FUWG+hz6fuwwTpD5p3w49qdNDu44ZUr4iosw9Ob64vtnpND2FmVi+f2PyPZfpTj5N/DU+AKjFvX0zSj6NkF8+fx0aPVYHJb4fYAM+IP4BvnNnWr1TDt0+dETMPd0pDb5fkAk/vWsRvnyS9r5w0cG+VfkVvbmLjb6+9rI94CIjPxYC3D53Umy92qZPvgc4L74Mc9i+9rINP2eNuT36thq9/SX4PZc5AT6HXZ88igiWPq6NNb2TO+089Yf1vhRzIb4FXIi9N3x0PV8FHj4iriq934SqPXwelT7M2JU+HH/ivUSvI74ybei92Xyave6eIj5/lfw9WGcPvjagRL2XdL69vnYfP+OuQzwo7da9aueYulIkBz4pmG67WFozvslN0L4sgLO8stfsPr9Uqj03X06+brSHvRDooLv0Ypy9JGIqPZ/zIL6YYAq+peedPUTihzxFl4i+dW0uPShqI74HwpG9NAiMvTMujj6kgVA9Hg6mPOW77b7HdiC+ByMfvf/hjD2b1Ay9hOgovt7WCT6PPo4+hC3AvfxSGr3IWky9ZSC8PdC9UT0Nhby94tg0vFUq6r3IHMS9/UALv/ZY5D37h4S9oGMrvv28bDuzW/M7HAYzvv4u375E3UU9TPwavOi3MD78v1g+WuOxPv1YOj6iLxG+dyFFvvnmrD2PE1g+x2LjPijGTT0n2Hc9LID1PUJ64T4OJ+y+0Ck/vjrTnT0DJAG+JKeevsmz8z6lCRq+WEaEPpZ7nDwga5I9PFGKvb3+tbx5bvM9LgsGPoJoRLsHVTo9EuCqvTTlvr6u/hk+9XrYvemUIL+eYSs+2POmPvbzdT4KB9O92UQ3vY6zjj4chbi+nA7UvvvVxb3gbBg+UbKqvb99mz77y9W+SRobvMsimT5dshG9uiN8PpgBAD+AmRC/msnzPKvstr2n1y0+i9fJvdxNvb3nIkI+K/6/PPl8RL7RcPy9lnpIPSKtmD2CSPu8Xee4Pbc09r3ppLs86zVFvpXbJD4uvB0+vNIGvgv7lD0te7++ZOU9PSGa2T4Cvdo9YqglvnaHnr4mlia9r8sDvdgstr60ePe9t1fwPYb6TD446Jg97iqEPY9UuzzB8EU8IGCRvj2y4D7jFQ0+uxIkPp9t7L0VKhI/IcwMvt4l7L1HJzU++OIaPtx5HL4xr4y+S2YQvmQwHj6wypI8N9wNP8E7+z2Uz3c+Y12SO5FVCL45/Io8ojKBvTy72bx0zJS+9SIbPwUwtDxd82G89nrhvUNgkD4o64w99GtXvuk4yb77hUY9rVj6PevZgz4WaUQ+60AwPt4gNT2+EtG7nUOivmj0Or4Cj7g90ZcEPvP+hL4PMCm9Uh5WviWLuT5P7xW+HNbyPqxJhb7Ur5m+BFLsvvUaqz7LJ/g+VptZPChf5z1ScVy+rlKHPoc13L79y2o+9icJPlp/hr3ozKo+UtTlvg3mib2vVQY/3ziNvQJ3Aj61Gsa+0LefvjbkAj0QHKk9UHEHvyVOYz4I2p4+7j4TP8j6ND+7U/S+7xhEv9hxTL/ogkq/HtttPupgYj7vKOc+8DsAP3FrRL9T1zS9l9ZYvuEgJj2skWG+0GHKvIM2NL8e9xY84fSnvjw//z75L2O+hvcuP3GgTr1fFYo+zCPJva29iT6m7xe9ZX66PZwriD2pZcg+K57PPiUhl775ILq+faJvPsRZbj4Oorg+RLtbP72y574ZvR0+9krRvSdEp75HIXm9gbKavU1mtj54uIy8khpzPoZd6779ZSK//CY/P8Xal73+2Ia8dNfKO4FnPLyT/Ku+/f8BPww1LT7bKSY+Pc8GPma8G79uNgi9SBwFPpX9Mr9Mjn8+y2f+Pi0r8T1N5xE8x4Itvg5MGj48ZTK/F+KcvuLlw71Cd4o+rV6ePYBHiD4FnoK+PeA4vnZLsr7rYwO+lrmKvok1Pz2gpAi/y0EpPNaZnb6sMgw/iS58Pg2V1Tthwi4+XsETPpweejwYeJw+qj5Jvjmj3r592is+NNJ9PdWwaT7bHye+usInvqJsTLy/doQ+GHmuPuoM0j7gkS+/4cmJPuIVDj6O2lu/Zx7GvbJb0Tz831y+tciBPN4SUb1/Isy+/b/KvhasJz5J6ak+uvOfvhvCAb74MM48T24bP1cMZL83Khg982aYvotBo77L27I+mfa3Pt4Snr6uOA8+6hUBv4G0gr5zmMW+s2hxPqeNUr4h2U8+q8ePPsAnpj7vW2G/hd4pv8SHRr8eZsW+Ec0BP6eFDT+10kU+PaSAv767nb66NCI/UdQMPzVHcD7oiuY+a0CrvaD07z3jLh8+NHLhvmvFOL8z4O+8G428vqbySz5/eqw+GRzfvst4DT/CmA6/Gnmdvp2vGz96IZI+O3bnvjX4SL/Cf4s+0qLuPfOwJT6FOA8/xLuGPwzeS7/KFga/VrXNvfqqAD70V5K9afp+PnXieD9YuSW/VlLaPZtHnb0q2nO+UcGIPLSndL29Cbi+djPAvP83Aj7gUB4+esTsvSvFz71L1i29TEfqvTJNID53KEw+LBy9vW4xV745CY69QGN2PIP6fTlwZSq91/QYPqqtsT4AxsY+5+NJvkykpL7m18e+UF+qvrO/7z03Ug2+U8aQvtf9uT34Xsg9B9FNPmBJpj3actS+soCkPYq4Az5LzrI+h3lYuw/y4b3C442+81q5vT+zhD6mjqs98dkwPiROgj3hLu29Buv5PbTULD2hVbq8pMsFPwtIhL45Hk69kYBsvvxAvz02zRs+sOd3PhWoFb7cArC+8fRDvR8ac74RFF2+edu6vvMBID7BkGK8donBPtB1ub6Eo7o9pNH6PJ0+oD2KEn++CNIOv1luyr4HfKQ+SHaBPXDK1r5uhb++Nb/3PsIj3D5Q7+I+oeWDvsJ4pL4USRm/cx3Pvpngs75scDS+laSMvq7hST7kivS+WDWbPRqOKD8ueSC/pzWuPZe9hT48d8y94kRHvHGatD1kswE/OO42va1j6D4cJ2O+K6bivt35Jb4HhCw9INAgvSofMT6FuCW+5Y7DPmlKlb4r34O+K6WAPpKulj6+lYm5zCe+vj2cXT7JDwW/t9D6vYgF+z6prGm+HYyLvgvRmr6hhJ68qKy+PpMZ0z0aIqC+IwaQPn+z2D5jIhq9D9mnPnxgmj5Kfwq9YP6VPbUv5j6GNQW+QpilvWE/sj5cAw+/JlmWvKgx2j7Espe+K4vcPBoZ2D7u8fo9l+ebPuWvFb3ZZvq96clmvsd0Q75yeNQ+I2VKPmRy8D0KY6g+R8SAvtvch73fDgQ+hZPNPjK7wj4ZPnk+zoEdvnYZez3Vove+1RobPgUFe76iTD4+pCvbPZgq3DwYrCI+zGJHPhTMgD4kX6C8ZbGIPZ9NXr7nFNs8p/GjPeTvbr4417w7xPsyPtGoFT3quQA8DfmGvoVmvj0nORm/qt3cvgOI8byLmMY9S8UAvodUyz5bUI49tpVmvuXP5L5NK2s+mCFmPvXzY70/3Fc+85XJvNxGsT5xVhe+eKOCPVd5Mb57m0a+CPfoPpwvIT7ys06+CawpPw1GDr+nqg2/1K2fPNxUlj2j86i9lV1Zvhzh7j4AWAY/4DOKvtwiGL+OUES+EPmuvqGPlD7JiWg+sNVjPXgLuL2rK0C+ZIoDvvvUbD7muB0+s5qZPhta8L4jOGw+jEUyPvfBgr61iNK9JRU5Pju++7urHIA9L54kvjegND5Le3g9gqRXvnQ24L3XJg4/FTEyPiJP4b6g8NA9daEvPhrI8D40L3Y+beD/vT2C1D7ii14+y0ztvQdsnT2YNWK+uOYkPsSIqz4FXoE+k5iQvlaStj3N9Bi+5vwxvasjpbyjWDs9xQNFvjQbUT6ojxc7DylWvuSYor7RVRk+yR3GvNzlnb35Fqi+DQ7BPRipBb/zcHs+tUQXvVc8Fj5pmXe+KxgfvjBhAL6WmtW+MBP2vgHmRj4BkTA+7y+sPuNAST73XVC/EB1TPhyIAD8np+G9V1xkvuDIpz55Mq29DptjvW/RyL2Tuu2+fdXFviIYL76OxXC+7plyPqkkHT5Mf+W9YvumPdgGlr4FYju9JY9gPnEzXr1kcIO+cMTwvuJfmL66Tom9SVYXPTn3Rj7t5Eq+MTISv57YVr6D5ek7uKfLPnGwLL79Qqc+O4AJPxjWJ72Ywle+xwpWvjh7lD6/FI88JzNqventZr3c6jM+WpJbPpAGuj44mLA6kNRtvQ+Xvb31o7q+O7TIPm01Fzz1oLG9UQJVvZ+OAD4a94Q+i+zaPcDvCj5LLPq8eBBVu3VVlj2OZBU+zbciPmjpVrwRBHW+BpU2vqqxx7xapfy9U9uuvUUlKb5KlZe9RXMQvmldij5zDnM80/GrvTvAZbzHM7S9/6NDPnA+Tr09oI2+rQrZPZZqjj2+s6m8okPHPokVQzwiWJW+NmBYPS6Khj1p1mO+eSW3vTy+g7ywPt69Lrq2vZQRCT2AJUM9DXrovKYRIj603Sm+VqgcPqScDLsxu6m+5SHgPoKJD76Zp+i9jwGaPEjWpT7+PxK9c5twvWgDl76VzKw8EDgRPj76pL3lcAq+eppUPvJnljz62C4+i7jBvkXxCr6ycyk+5cK4Poy90D2SUI4+lT1OvrOsmb4ebJq+8L/1vb+rpj62VLC9pWrXPTye8j2O/c899ofCPs2QEL2jRIA+RNLDPk8bRb56HwQ88FIPviFNgb2gOTC+JlaMPh0QiL0Sz6E+I/UGvfWzSL5Zlfw7jVOxvb+/XD1sIro+RJcivQRx0j0c5p6+Jbr1vWs1XT4S7zO+Ej6LPEPyQL6LTxK+tVqHvqzwfL73qxw/AJUEu8fJuz4J4Fy9M9ymvU455r77i42++ziQPQRFo71/rik+OyjYPjKNr74iD/Q9lzzBPt1err28hV2+5KC2velo8L7aENE+B+hwPkTl5L0y20++2/CLvfiuCT3Wn9W+w4Rmvp3LGj6CJmM9j2zmPf3hnTwnkYK+aLnXvD82m71hiVk9/bwovuB7yb0VX7a83+Anu2Ligb07tvA+z3CwPZSCJDx6Wu0+s4jYvXjIjby2H/M+u5mhvo/dgL2tbgA/zBgiPacegj4eDXI+F2UPvXYNhb4I6a0+zgQcPqIXlb00wZ6+T+6vPcLLAj1XnBW+MuKFPph8+D7yPW2+MEqaPS9wRT7v9GK+S/LxvpiShD0ILYY+nZOYPi7VQT33qm8+a42/Peu1aTtI/Wy+PWaXvgR+BD5FNvQ9wTusPUMR2z2LakA9nnngvTy5D76CpDe+vuQrvkMbjb7RoCM6S7jSvZDFw70lO7m96FkxvECEqbunSII+eeTlPfYHlz5vVl0+zycePmSvID5CaWA9tlTFvKvajj7XqeA+TOuqPQdjtz45dJq+E5qCvtrcuTuxX4M+wSdvPqRUhL7jXdM9SkSnvoz8rL0qEgq+7UbpPYeMHT4mmBA8yTBMvroLLLsoMf++UuvCvtpFGL5YZ3W9fGxtPQVcPb4+2QW+yxY1PbEwqT6aJTM9Y5oHvdiJE75/WYo8TnkyPXe1kT6svZQ9csBAPvPTID0oxTu+W/pivjmvqT13Yro+HQaAPrT8K74Z8xM5+rLZPrNnHj6KyLY83fiMvhGHiL49A1o9cXOsPkdz8D7YYas+0ScpPQewWTvE0jM+TSxHvR6yxD6B4lM9QC5kPn43rbwgJ/A9nDNtvuIJvz2rNw++ygBzPZN8Rb6U6As9RRLKvoz5I77rn9Y9U5P6PVCharzjtfk9l4rZPSLn+r35wjm9wLZxvhGJAT2boge84TBgvk9xdb7fijI+Cdscv8AjUj48cTe96zcdvrNkWr5lFbm9AssXvoz8gLz5ccw+9EIivXMlAj7wlKC7g/mFvot7uzxx/S0+luCnPExvWr7ePHU+ouRjuJCOYz49cEO+NGqWvULDhb4NmVo+1GenPZHdOL4VRBC9ztyPPpFi8j3/8oo+R89yvBZej75PX+S9SWtFvsWywL7ac6m+IyRLvgBvKL3CN669Hb4XPvRXHbzYyuK90cWKvcFrbr4jV/U9ijiUu76gyj6IWZ8+8kxKvVFAaj6/cQm+ohumvhDgh73QXgW9d4iHPnDPuj5VAnm95N79PVaLQL4Qiwq9uIqZPs0Ydj7kpiO+wAzPvdru3z5UufK9q/B2PkjyeD5xnHq+5om9vpo2Fb6BXda9ssibPY5lvz1KO7e+AM/ZPv9c9D3JuIU9uwY/PaVx8r2IgBa+IXL8O8suDr1rtQA/Rm5kPpvdar5GFPK9thTJPSesJ74WCZq+e8QivdjqGj2s4qs9zUnHPXrEED0Nsom+DooAvk7y1T0xd+q7C+p9vgAbhT2Iu0S+lZVMvlNrUz4Kmee8WTamPbRyE76g1ue9LuYHvgLRGD6o6oG9qqusPflcA77wV/Q9rgOIvU7LiL0lMSu8uGz+u3oh5z4/fIo+Zd9EvET/cD3IpwC8KX6FvcOGUb5s3Ic9klCMvfHIpTnR3J8+zEeQPeCNtTzKHhk+thaEvu/DE71paAq+8hQ5PR8pGj9pyRM+BCZ8vihRTz2OYg0+lxQXQB5z5L9OyS0+izD6v2FtRD9gHkpA7ceRQFc9nD9lXInA0wQdwEiloD9RAqM/r88ZwKo6WUCIVmFACxtUQDMjXEADQNi/gKwkwPhuPcBx5EjAH1ByQIQuhEDr9kFAh/BQQKmSWsDLAVjAUUQuwGBHhEC9Ae6/F40oQIJ4nb5C5uq/0M3rP2RfIECI2rO/vzEwQOlgC8Cl2kzAm0fuv0yqM8DwKv0/XqY9QB/D7r994UZAgzcvQPec+78Dzbu/cg0oQDiV7b8xWXdA/DBtQEATOcDMWXk/uG8uQPv/JMCzxE6+yqExQF8glD/8kBa9UtQEQIePDMDFBUhArbINQJ7EWr4Efm8++De+PnmsaL4ElOm+q17XvhzE5L5jpm4+sKi5PWqIhT8zwAI9P0jRPkhqiz+dMzc/ZqSHvy6mrD0Dmjk/9ug2vERvyb6Knqw/icGLP15MZT/IO20/+LbdPkhkX781Qkg/E4pLv+qWAcDPHSPACU7WvQeXwT9PgSc/UTRWvSrT9r7Jipy/rHYsvh3gDT9Cj98+CXodwMLS2z0qaRo+bNtsv7Dcm77Wyt0+IuhpvrPIwj6dvmu9Xn/EvjXvNz71Ih0+/fnjvwAzJj/pdJU/xVW2vdU/c8AfkK8+MQoLwM/wLL+xdGs9lt0TP0cr+z1tKTg/nWy/PD+PHr/wtS2+bh6DvTGDkr6MRp88aReevbwSCj5sfp4+rVpfPje7aD5QH8y98kYCvXl5jL6VXPQ9wRDrvV+Vib0Z58C+g4zBvWmjM7wiG4U9YrSfvlGIBr5MOx0+P6uIvNtrqL1H06e8EJv7PQM9Kz7F4Cc+4sTkvQB5Gr3NOn29xcVFvYXgLb1mrti90lgcPrpLDDzH3TW9PGbiPdC4Mb6iWeY7DurUvandvT3NzCa9OjFbvuOSkzxXKxC+nzeJvlNZKb6YWNU+OiK7veOgVr7E4zG7Fb8lvYCq2L2DbuG8ZEqXvgqLO72nUjk+C0VVPept5j4MFxy9WwlXvs1Q9z0s9Q4+kdREPbuWzjy5NXW9ZMmzvJJs47wmt36+25KMPHqebb6mTxc9Nwq1vRNX8z12WKG+bKDnPZH7p77oCUo8u5hRvnR6aT7gKYq9hc2tPgUu/z15yvO8pzMqvqPezT14aKM9olT1PNe9ML0gqqK9ha1+PnS2Hb4nyQQ+spGbvRJahD4ANlG+QYdaPoFllb1wMiK+dDKdvfCueb2xdvS98vGJPUX3wb0ac60+BH23vVBlBL5xyS89ffV9vtfhLz6901m+nicGvjvnAT1dhP690aJHvrAQQL7Sw9i7ASlkuynqnr2P1yG+i2ZEvjSfKT31c1U+lUQCPsTwgr3M5Ck+cmfOPB08ob13OlA+Lq4fPq+fSD4/Dig+Bqn3PcUWSLs9/4Q9QYiAvP32CDzm8Ig9xXvDvRf2wD2xtbq+xdfrvY/5xL6QhKu+ZZhPPTybf70dYwU9JuISPUXgXr4l+7m+FoAAvm52i76IZ8o87WDOO0kS9T1NoYu8728cPjGxzT1unjo+h7Tuvb4Liz6tomK9QZaWPaxGYD5eTT2+29+/vS64Mj4E+zw9g/9hOw17Fz5WKOC9Krjcvp8tNj1vX8A8JoS7PSEdFDy10rC9/dYRvI5nGL46iQc+A5U1PoawcrwA8D09WRsAPmo7+L3lQKy9CQv2Ph1Sjb1a86q9OtfCPfvC372Y5gA+I5pFvnYk8T2UDTw9naOePrGQgr7Ogg2+ZpSEvp+WmT748Oq9XSkdPnUHCr4ky8u8c+lwPN73Jz0onD++J+frvYCUlb6a6Ju9zNxePfEo8zzbH6E+yL6sPv+1dD6uOiq9VtI4PmPbtT2FOEo7MrAWP491rT4PX0i+mJc4PoAdaT2qS4e97tJRPpftDD6cpcM9x+kgPrFNID8PPhK+PlIcvt7zBb8CQ64+fKaRPRNK+D26fQw/qycIPrRdlD3qZb698KGQvHZLuD7e9IG+h2+ZPtJkFj6eSre9p91qPgvSxz4aXrs+iPGSPesa/j2uUXy+o18JPjejir7Wmgg+9DpQPXDb6j29GzS+c8huPqncIb7Hxva9JxexO+07ur4OMoC9ZviYvAvmorwceh++ayHpO2Vb/T3ti/u9xJSJvSfvw7vniCg91+YhPhG/xzwu+m88di0/PuMIDz7k1A48zNTcPOAnqzzgmiW+DoqdPYvKET1+hxG+xMMAvjTmLb6bpRM+osOxPXkuAb65s1U9fSJ/vJWahr0qpcw+kzMFPpTxk72Ye1o+rpKpPdolv70/sBw93pABvrJzpL3BcMc9L9MlPo6FjL7ViuI9lzEEvnfMBb4uvQe9Df3EPVec1LuKdBM+SP45vqy6gb2JEN0+lxI3vaAnoD6szkc9pNRMvpfpu71rkeM9BbU9vlR6eT5mvgc+1Il2PkpjEr7dziI8D7bMPgQCVT8BclC+UNKvvlbtXD9ep8099jszvytqDT72M/a8vF+TvCPMjz1Z9lc/kMBdP31arr5XyNu961v1PROIob5G0i0/96MVPnw6jb7OeQS+LEmxPWJ2Yj2GXB0/CMuNPd7ghD2vuji/ACCDPcjQAr5nMXC+d6PsPVfCL7zW6k8+Gzm3vm2Tgz6ITjO+xcWnPImoF75LlzI87ezZPE6BxTv5n0e+hFfIPsr/4j3GKWM/uYz7utrQqr5OonQ+7IzSPVa8W7zkgTi+iJe4PuN4oLyIwAM/26rSPX5zyb6jVAE9RNAAPjZyjb0wGbS9B1uUPIN+8rxXc669zyJmvpyyAz4vjN69zOQ6PRMvYz3NtTa+qfWJvb0dlb5Jdyw+jq28vZDIiL1wL+C9IfEWveAvp70/EHg899OnPiOcsrw3WUS+i/YovTri7j2wmCI9ePgEvrakHD4bd7M+IJ22vtvLCb6/OkM9iag6PrAcWD1K+AG+Vh6EPG4JEr6i19i9JLREvpJaHz5E9fm9rnbpPC2Zx70oLgO+5QVXPflzDb61UXa+kxUPPCsZC77909C95NdsvoYkfz7/8QS+FeqIPK0LDL7Y3e08ySwdvaWsJT761R0+/ZqJvuTGFL4U6Lk+XZHBPbhcA76Pqxs+W61HPmpdID4T9Sq+VuTWPSbMKb4OJZ29qEH4vWR7Wj7fOqQ9XKKxvfApOj1m0Ci9jZFPvhRQNb76/uO8u0wEvrAPFr0KCBo+5eyiPuXwPz1yWIU+UjiRvhfoQD1J/C2+pV+wPb8E+j7NxXk+WvXrvdT1jz7nPdK7Sb8dvTMXV76m/ZE+IaH8PNGl+j3ZwLk9DxbwvOFGnL6MLbe+nuuTvdSh5L3oXhg+kY9+PmJjaL6nf4U9jCq6vdMv8b0cK5I+6FIqPMyNh70/TdQ9TZ8LvTMmNr4RTrY+2nS+Pj9bfj1o+Og81azgvaIclb08G3K+CXC4vbIcsr1napM8VnwAPrBPqD1SWPm9pdhyviVN4b0oGBk9XMf+vWu/pL2LvDC9t6fFPOlL0rpPioq9RuYkvvLkKr2jg629JN7EPsupmD6tILu8wqpHvfidwLzISq49z7gfPvODJL5jmNA9MNhevmiKVb1N+yK9FCTLPcqJ5708Xt09ISNrvUTnUj6o4yc9UKExPuTJHj7Mb7Y93sgzPuSOfr4w33099wCePqElq70uaEy+HBP0vOdJtbt+iHC9aNjEva3JKj6BKyq+ObUPPmtrGz7xkMk8dznrveU8Ij1j1Ba8PapNPfXWsb1wYKY9faauPthGhT62s4o+W36JvbXQMr5Mwd091guPPuexbT5W1ai8jRBkvjmqSjyFlzS+TqopPVS1Aj75aEg/9O+ru+bjMD40glg/CbJDvpgCM7/WEgu9d9QkPvGdPL4i4a2+y0WKP7m0fj+7XfO9eKPevslFCz0iixy/sfsjP1BgFr73O0W/XSyFPo3u2rtWm7y+6DJJPzKnuTtm4m0+z8RXv0+v5r1thq09aFAfvpXJfj6FUO49kmBVPg1BqT4+ARI+jfBlvfI747xDJj49+f0bPiMqgb1tLs28grKrvlbUJj4Jo40+f/1PP2xrmT15exq/+GrQPh3EUj7WNh898wORvArinD6ai5w9Y6c0P7VU9b2BjUK/1FYYPn4pQT7IlYE+8CNWuzFLP71bFnA9hu6dPeipS70Hrh89dSv5PLs0gj5vL6e+7ReAvQBHRT7ndZW+dFjavOikYL4zZyq7LNPuu5njtL6HiKc8luM+PjGDaj63zhC+G6GOvPkIyTyxbsa96BiDPkt6Gb7AQ1E9yeZtPWBenr5ZmaG92qmvvYkiMT4gGjO+07RNvrvRjb4p+Bq+WnH9PbQMqzytlPG9o24nPpK9tr3QsUM+rwuoPUKC3T0kwSM8nNghPnCVIL7cpU8+imF3vWf6jb1amZ+9rC7xPdKdDT7Fyga+e2MzPe0cxb0qDfw+pn6WvfnaQr4+koq9PAv0PQtaujyDH7k8hziXvXhh3D0W/EA9A1UjPT7CP71ZHUS7k10kPkLoPrwTmNK8yvWcvQAorjwe9xq9IJzGvJGV372Hx6+94Ew0PbucuD1HH0E9M3PFPIkLfr3hmIS9KzEivftC47x92hw8y5euPayM7j0g2he81e/OPHwICT235R89n4puO3yzyj2vkoO8DP8JPWh+G76NsDu9y8v4vJ9Jsj3h4C48K2+YPXuLBzvNyCe9nAxbvbGWgb1g8909ppCZPZai0r0J6UY7PMkcPf/QJr49aQ88rrUFu5+AobzzVea9E5VXPDLTYb2fDya9kDysPlgGEL2TDbA7xFVcPQY0Qr16Xpq+5epBPoMOwzmLYrq6azVcvYBDC72HUYg7Wyn/OtXl3r7MKoM+AVfwPjDLsr4cbnW+uEwUPmGpNj7UN+282IH0PvGfUT7k01K+TMnAPtgsH72Owpo7U7fHvL9Aar1n7vu+J4QaP8CGvj56Sr6+HS/0PgNBwr7L+M695FvzvlThfL4JFja+sKIEPF/W5bsB5KE9d7fTPfAm/74Z8xg/i1YCv8IcEj9J3Ow+93ravl/p8z7/xea+PFO/PhuLxr6tKMM+e/e0vgCz/r63NhA/tV+4vlluuz54TMy+SMcLP4nEAz9xUfm+sniOvSOvtD1wo+S+zhDcPhNnp75XctA+OUIBPIdIALrjYpS+msmLPrhm1T4d5va+6+MjuxEiwbtqLCK+EAEDvhwM3z05Uou9UCnyPpvgnL4oM3c80ZSHu61niT7NpAC/muEfvgzu5D12SSa+bgoVPnvGoD2gUNe9VeUHv/Cty72MYqw+JV5+vo/mObvutdk7Zgu9vqUVxz7mhum7Kz4gPIAnvj0eZt69d3TsPlaW2L7h+sa9S07cvR5jtb5QChQ/+0L7u20NeTtcE/e+makEP/MYpL7ySZM+HkjCPoT2lL5KhY8+uRaMvoATq7mvIyG8gpNuvneJPz6Qp583o6srupXoMb4dVKY+W2WkvmrTez49NNc+CrSRvm9+6L0OdaM9'), (c) => c.charCodeAt(0)));
+  const $ = (id) => document.getElementById(id);
+  const key = (r, x) => r + ',' + x;
+  const nameOf = SKIN.name, chip = SKIN.chip;
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+  // G.mode: idle | claim (holding two of a kind, one must go to the realm) |
+  //         plot-pick (choosing between two diagonals) | plot (diagonal picked up)
+  // G.stage: the opponent part-way through a move, for showing it in two steps
+  let G = null;
+  const blank = () => ({ angle: Array.from({ length: 48 }, () => Math.floor(Math.random() * 360)), where: {}, turnedFrom: {},
+    mode: 'idle', pick: null, claim: null, plot: null, lines: null, stage: null, beam: null, hint: null,
+    fresh: {}, note: '', warn: false, flyFrom: null });
+  const myTurn = () => G.s.toMove === 0 && G.s.winner < 0 && !G.stage;
+  const say = (text) => { G.note = text; G.warn = true; };
+  const reset = () => { G.mode = 'idle'; G.pick = null; G.claim = null; G.plot = null; G.lines = null; G.beam = null; G.hint = null; };
+
+  function deal(depth, two) {
+    const s = TS.newState(10, Math.random);
+    G = Object.assign({ s, depth, last: '', tut: null, two: !!two, turned: false }, blank());
+    render();
+  }
+
+  // ----- tutorial: a fixed position and three steps that end in a win -----
+
+  const TUTORIAL = [
+    { deck: 2, expect: (m) => same(m, ['claim', 2, null, null]), reply: (t) => t.m[0] === 'claim' && t.m[1] === 3 },
+    { deck: 0, expect: (m) => same(m, ['claim', 0, 28, [0, 2]]), reply: (t) => t.m[0] === 'claim' && t.m[1] === 2 && t.m[2] === null },
+    { deck: -1, expect: (m, after) => after.winner === 0 },
+  ].map((step, i) => Object.assign(step, W.tutorial[i]));
+  function tutorial() {
+    const s = TS.newState(10, Math.random);
+    s.cells.fill(NONE);
+    [[0, 0, 39], [1, -1, 3], [1, 1, 19], [2, 0, 27]].forEach(([r, x, c]) => { s.cells[TS.cid(r, x)] = c; });
+    s.decks = [[0, 4, 12, 16, 20, 32, 36, 24], [5, 9, 17, 21, 29, 33, 37, 1], [2, 6, 10, 14, 18, 22, 30, 34, 38, 26], [11, 15, 23, 31, 35]];
+    s.dlen = s.decks.map((d) => d.length);
+    s.hands[0].set([28, 25, NONE, 7]);
+    s.hands[1].set([8, 13, NONE, NONE]);
+    G = Object.assign({ s, depth: 1, last: '', tut: { step: 0 }, two: false, turned: false }, blank());
+    render();
+  }
+
+  // ----- what is where right now -----
+
+  function view() {
+    const s = G.s;
+    const V = { me: [[], [], [], []], opp: [[], [], [], []], lifted: -1, hole: {}, put: {} };
+    for (let t = 0; t < 4; t++) {
+      if (s.hands[0][t] !== NONE) V.me[t].push(s.hands[0][t]);
+      if (s.hands[1][t] !== NONE) V.opp[t].push(s.hands[1][t]);
+    }
+    if (G.mode === 'claim') { V.me[G.claim.t].push(G.claim.c); V.lifted = G.claim.t; }
+    if (G.mode === 'plot') {
+      V.me = [[], [], [], []];
+      for (const c of G.plot.pool) V.me[ctype(c)].push(c);
+      G.plot.line.forEach(([r, x], i) => { if (G.plot.placed[i] === NONE) V.hole[key(r, x)] = i; else V.put[key(r, x)] = i; });
+    }
+    if (G.stage) {
+      V.opp = G.stage.stacks; V.lifted = G.stage.lifted;
+      for (const k of G.stage.holes) V.hole[k] = -1;
+    }
+    return V;
+  }
+
+  function triggers() {
+    // x of each relic on my row of the realm that I can plot from, with its complete diagonals
+    const out = {};
+    if (G.mode !== 'idle' || !myTurn()) return out;
+    const mask = TS.handMask(G.s.hands[0]);
+    for (const line of TS.lines(G.s, 0)) {
+      const c = G.s.cells[TS.cid(line[0][0], line[0][1])];
+      if (mask & (1 << house(c))) (out[line[0][1]] = out[line[0][1]] || []).push(line);
+    }
+    return out;
+  }
+
+  // ----- drawing -----
+
+  // On an upright screen the stage lies on its side, so the game is always
+  // landscape. q counts quarter turns clockwise; local() converts a rectangle
+  // on the screen into the stage's own coordinates.
+  const stage = $('stage');
+  let rot = false, q = 0;
+  // In a two-player game, is it the turn of the player on the far side? The pieces
+  // stay where they are; the position is only read from the other side.
+  const far = () => !!(G && G.turned);
+  function fit() {
+    const Wd = window.innerWidth, Ht = window.innerHeight, st = stage.style;
+    rot = Ht > Wd;
+    q = rot ? 1 : 0;
+    document.body.classList.toggle('turned', far()); // only the words turn to face the far player
+    document.body.classList.toggle('rot', q !== 0);
+    st.width = q % 2 ? Ht + 'px' : q ? Wd + 'px' : '';
+    st.height = q % 2 ? Wd + 'px' : q ? Ht + 'px' : '';
+    st.left = q === 1 ? Wd + 'px' : q ? '0px' : '';
+    st.top = q === 3 ? Ht + 'px' : q ? '0px' : '';
+    st.transformOrigin = q === 2 ? '50% 50%' : '0 0';
+    st.transform = q ? `rotate(${q * 90}deg)` : '';
+  }
+  const tableHeight = () => (rot ? window.innerWidth : window.innerHeight);
+  function local(r) {
+    const Wd = window.innerWidth, Ht = window.innerHeight;
+    if (q === 1) return { left: r.top, top: Wd - r.right, width: r.height, height: r.width };
+    if (q === 2) return { left: Wd - r.right, top: Ht - r.bottom, width: r.width, height: r.height };
+    if (q === 3) return { left: Ht - r.bottom, top: r.left, width: r.height, height: r.width };
+    return r;
+  }
+  const localMove = (dx, dy) => [[dx, dy], [dy, -dx], [-dx, -dy], [-dy, dx]][q];
+
+  // Two players at one screen: after each move the position is turned round in
+  // the model, so the player to move is always "player 0". It is then drawn
+  // from the far side, so nothing moves on the screen.
+  function turnRound(s) {
+    const n = TS.clone(s);
+    n.cells.fill(NONE);
+    for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) {
+      const c = s.cells[TS.cid(r, x)];
+      if (c !== NONE) n.cells[TS.cid(2 - r, -x)] = c;
+    }
+    n.lo = -s.hi; n.hi = -s.lo;
+    n.hands = [s.hands[1].slice(), s.hands[0].slice()];
+    n.toMove = 1 - s.toMove;
+    n.winner = s.winner < 0 ? -1 : 1 - s.winner;
+    return n;
+  }
+
+  let L = { cw: 40, ch: 62, g: 5, x0: 300, bw: 600, pitch: 70, rowTop: [6, 73, 140, 207, 274] };
+  function layout() {
+    const s = G.s, board = $('board');
+    // how far the realm reaches to the left and right of its centre, in half-steps;
+    // each side grows in steps of two, so the table rarely rescales
+    let left = 0, right = 0;
+    const seen = (x) => { if (x < 0) left = Math.max(left, -x); else right = Math.max(right, x); };
+    for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) if (s.cells[TS.cid(r, x)] !== NONE) seen(x);
+    for (const [, x] of TS.openSlots(s)) seen(x);
+    left = Math.max(4, Math.ceil(left / 2) * 2); right = Math.max(4, Math.ceil(right / 2) * 2);
+    if (far()) [left, right] = [right, left];
+    const span = (left + right) / 2; // pieces across, less one
+    const g = SKIN.gap, k = SKIN.rowPitch, gh = SKIN.handGap;
+    const wide = $('table').clientWidth - 24, high = tableHeight();
+    // across: piles (a piece + 20), the table (span + 1 pieces), the words (150), two gaps of 10
+    const byWidth = (wide - 20 - 20 - 150 - 12 - span * g) / (span + 2);
+    // down: five rows: hand, three realm rows (pitch k), hand
+    const byHeight = ((high - 20 - 2 * k * g - 2 * gh) / (3 + 2 * k)) / SKIN.ratio;
+    const cw = Math.floor(Math.max(22, Math.min(SKIN.maxWidth, byWidth, byHeight)));
+    document.documentElement.style.setProperty('--cw', cw + 'px');
+    const bw = Math.ceil(span * (cw + g) + cw + 12);
+    board.style.width = bw + 'px';
+    const x0 = 6 + cw / 2 + left * (cw + g) / 2;
+    const ch = Math.round(cw * SKIN.ratio);
+    const realm = 6 + ch + gh, step = (ch + g) * k;
+    const rowTop = [6, realm, realm + step, realm + 2 * step, realm + 2 * step + ch + gh];
+    L = { cw, ch, g, x0, bw, pitch: Math.min(cw * SKIN.handPitch, (bw - cw) / 3.2), rowTop };
+    board.style.height = rowTop[4] + ch + 6 + 'px';
+  }
+  const at = (row, left) => `style="left:${left.toFixed(1)}px;top:${L.rowTop[row].toFixed(1)}px"`;
+  // the mover's side of the position is drawn at the bottom, or at the top for the far player
+  const cellPos = (r, x) => (far() ? at(3 - r, L.x0 - x * (L.cw + L.g) / 2 - L.cw / 2) : at(r + 1, L.x0 + x * (L.cw + L.g) / 2 - L.cw / 2));
+  const myRow = () => (far() ? 0 : 4), oppRow = () => (far() ? 4 : 0);
+  const spot = (r, x) => (far() ? key(2 - r, -x) : key(r, x)); // a place in the realm, as it lies on the screen
+  // Where the relics of a hand sit. Relics of one kind overlap by only a tenth,
+  // so each stays readable and easy to pick; the row closes up if space is short.
+  function handRow(stacks) {
+    const n = stacks.map((st) => Math.max(1, st.length));
+    const extra = n.reduce((a, b) => a + b - 1, 0), room = L.bw - 12;
+    let gap = L.pitch - L.cw, step = L.cw * 0.9;
+    const width = () => 4 * L.cw + extra * step + 3 * gap;
+    if (width() > room) gap = Math.max(4, (room - 4 * L.cw - extra * step) / 3);
+    if (width() > room && extra) step = Math.max(L.cw * 0.3, (room - 4 * L.cw - 3 * gap) / extra);
+    const starts = [];
+    // centred on the realm's centre where there is room, otherwise kept inside the table
+    let x = Math.max(6, Math.min(L.bw - 6 - width(), L.x0 - width() / 2));
+    for (let t = 0; t < 4; t++) { starts.push(x); x += L.cw + (n[t] - 1) * step + gap; }
+    return (t, i) => starts[t] + i * step;
+  }
+
+  function cardHtml(c, attrs, cls, where) {
+    const live = attrs && /data-(src|dst|act)/.test(attrs);
+    const tag = live ? 'button' : 'div';
+    return `<${tag}${live ? ' type="button"' : ''} class="card h${house(c)} t${ctype(c)} ${cls || ''}" data-card="${c}" data-at="${where}" ${attrs || ''} aria-label="${nameOf(c)}">${SKIN.badge(c)}</${tag}>`;
+  }
+  function slotHtml(t, attrs, cls) {
+    const live = attrs && /data-(src|dst|act)/.test(attrs);
+    const tag = live ? 'button' : 'div';
+    const label = t === null ? W.emptyPlace : W.noKind(t);
+    return `<${tag}${live ? ' type="button"' : ''} class="slot ${cls || ''}" ${attrs || ''} aria-label="${label}">${t === null ? '' : SKIN.slot(t)}</${tag}>`;
+  }
+  const picked = (k, v) => G.pick && G.pick.k === k && (k === 'hand' ? G.pick.card === v : G.pick.i === v);
+
+  function draw() {
+    layout();
+    const s = G.s, V = view(), trig = triggers(), H = G.hint;
+    $('table').classList.toggle('focus', G.mode !== 'idle' || !!G.stage);
+
+    // reliquary
+    $('reliquary').innerHTML = [0, 1, 2, 3].map((t) => {
+      const lifted = V.lifted === t;
+      const c = lifted ? NONE : TS.faceUp(s, t);
+      const beneath = Math.max(0, s.dlen[t] - 1 - (lifted ? 1 : 0));
+      let inner;
+      if (lifted && s.dlen[t] > 1) inner = `<div class="card back t${t}" aria-label="${W.faceDown}"></div>`;
+      else if (c === NONE) inner = slotHtml(t);
+      else {
+        const live = myTurn() && G.mode === 'idle';
+        let cls = (G.fresh['d' + t] ? 'fresh' : '') + (live ? ' can' : '');
+        if (H && H.m[0] === 'claim' && H.m[1] === t) cls += ' hint';
+        inner = cardHtml(c, live ? `data-src="deck" data-t="${t}"` : null, cls, 'pile' + t);
+      }
+      return `<div class="pile" style="--k:${beneath};${SKIN.pileStyle(beneath)}" aria-label="${W.pile(t, beneath)}">${inner}</div>`;
+    }).join('');
+
+    let html = `<div class="zone" id="hand-zone" data-dst="hand" style="left:0;right:0;top:${L.rowTop[myRow()] - 3}px;height:${L.ch + 6}px"></div>`;
+    html += `<div class="rowmark" style="top:${(L.rowTop[0] + L.ch + L.rowTop[1]) / 2}px"></div><div class="rowmark" style="top:${(L.rowTop[3] + L.ch + L.rowTop[4]) / 2}px"></div>`;
+
+    // hands: the opponent's on the top row, mine on the bottom
+    const oppLeft = handRow(V.opp), meLeft = handRow(V.me);
+    for (let t = 0; t < 4; t++) {
+      if (!V.opp[t].length) html += slotHtml(t, at(oppRow(), oppLeft(t, 0)));
+      V.opp[t].forEach((c, i) => { html += cardHtml(c, at(oppRow(), oppLeft(t, i)), (G.fresh['o' + t] ? 'fresh' : '') + (G.stage ? ' lit' : ''), 'hand' + oppRow()); });
+      if (!V.me[t].length) html += slotHtml(t, at(myRow(), meLeft(t, 0)));
+      V.me[t].forEach((c, i) => {
+        let cls = G.fresh['m' + t] ? 'fresh' : '', attrs = '';
+        if (G.mode === 'plot' || (G.mode === 'claim' && G.claim.t === t)) {
+          attrs = 'data-src="hand" ';
+          cls += picked('hand', c) ? ' sel' : G.mode === 'claim' ? ' can' : ' lit';
+        }
+        if (H && H.m[0] === 'claim' && H.m[2] === c) cls += ' hint';
+        html += cardHtml(c, attrs + at(myRow(), meLeft(t, i)), cls, 'hand' + myRow());
+      });
+    }
+
+    // the realm
+    const choice = {};
+    if (G.mode === 'plot-pick') G.lines.lines.forEach((line, li) => { for (const [r, x] of line.slice(1)) choice[key(r, x)] = li; });
+    const open = TS.openSlots(s);
+    let lo = s.lo, hi = s.hi;
+    for (const [, x] of open) { lo = Math.min(lo, x); hi = Math.max(hi, x); }
+    for (let x = lo; x <= hi; x++) for (let r = 0; r < 3; r++) {
+      const k = key(r, x);
+      if (k in V.put) {
+        const i = V.put[k];
+        html += cardHtml(G.plot.placed[i], `data-src="place" data-dst="place" data-i="${i}" ${cellPos(r, x)}`, picked('place', i) ? 'sel' : 'lit', spot(r, x));
+        continue;
+      }
+      if (k in V.hole) {
+        const i = V.hole[k];
+        html += i >= 0 ? slotHtml(null, `data-dst="place" data-i="${i}" ${cellPos(r, x)}`, 'lit') : slotHtml(null, cellPos(r, x), 'lit');
+        continue;
+      }
+      const c = s.cells[TS.cid(r, x)];
+      if (c === NONE) continue;
+      let cls = G.fresh[k] ? 'fresh' : '', attrs = '';
+      if (G.mode === 'idle' && myTurn() && r === 2) {
+        attrs = `data-act="${trig[x] ? 'trigger' : 'peek'}" data-x="${x}" `;
+        if (trig[x]) cls += ' can';
+      } else if (k in choice) { attrs = `data-act="line" data-li="${choice[k]}" `; cls += ' can'; }
+      else if (G.mode === 'plot-pick' && r === 2 && x === G.lines.x) cls += ' sel';
+      if (H && H.m[0] === 'plot' && H.m[1].some(([hr, hx]) => hr === r && hx === x)) cls += ' hint';
+      html += cardHtml(c, attrs + cellPos(r, x), cls, spot(r, x));
+    }
+    if (myTurn() && (G.mode === 'idle' || G.mode === 'claim')) {
+      for (const [r, x] of open) {
+        let cls = G.mode === 'claim' ? 'lit' : 'faint';
+        if (H && H.m[0] === 'claim' && H.m[3] && H.m[3][0] === r && H.m[3][1] === x) cls += ' hint';
+        html += slotHtml(null, `data-dst="cell" data-r="${r}" data-x="${x}" ${cellPos(r, x)}`, cls);
+      }
+    }
+
+    // beams of light along diagonals, drawn over the relics
+    const beams = [];
+    const mid = (r, x) => (far() ? [L.x0 - x * (L.cw + L.g) / 2, L.rowTop[3 - r] + L.ch / 2] : [L.x0 + x * (L.cw + L.g) / 2, L.rowTop[r + 1] + L.ch / 2]);
+    const addBeam = (line, dim) => {
+      const a = mid(line[0][0], line[0][1]), b = mid(line[2][0], line[2][1]);
+      beams.push(`<line class="beam ${dim ? 'dim' : ''}" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/>`);
+    };
+    if (G.mode === 'plot') addBeam(G.plot.line);
+    if (G.mode === 'plot-pick') G.lines.lines.forEach((l) => addBeam(l));
+    if (G.beam) G.beam.forEach((b) => addBeam(b, true));
+    if (H && H.m[0] === 'plot') addBeam(H.m[1]);
+    html += `<svg class="beams" aria-hidden="true">${beams.join('')}</svg>`;
+    $('board').innerHTML = html;
+    if (SKIN.spin) {
+      // no leaf has a right way up: each lies at the angle it landed at, until it is moved again
+      document.querySelectorAll('[data-card][data-at]').forEach((el) => {
+        const c = el.dataset.card, at = el.dataset.at;
+        if (G.where[c] !== undefined && G.where[c] !== at) { G.turnedFrom[c] = G.angle[c]; G.angle[c] = Math.floor(Math.random() * 360); }
+        G.where[c] = at;
+        el.style.setProperty('--turn', G.angle[c] + 'deg');
+      });
+    }
+
+    // words and buttons
+    let text = G.note, buttons = '';
+    const T = G.tut && TUTORIAL[G.tut.step];
+    const back = '<button class="btn" type="button" data-act="cancel">Put back</button>';
+    const menu = '<button class="btn" type="button" data-act="rules">Rules</button><button class="btn" type="button" data-act="menu">Menu</button>';
+    if (s.winner >= 0) {
+      text = `<span class="won">${W.won(s.winner === 0, house(s.hands[s.winner][0]))}</span>${G.tut ? W.wholeGame : ''}`;
+      buttons = `<button class="btn primary" type="button" data-act="menu">${G.tut ? 'Play a real game' : 'Play again'}</button>`;
+    } else if (!myTurn()) text = text || W.thinking;
+    else if (G.mode === 'idle') {
+      text = text || (T ? T.idle : W.yourTurn);
+      buttons = T ? menu : `<button class="btn" type="button" data-act="hint">Hint</button><button class="btn" type="button" data-act="pass">Pass</button>${menu}`;
+    } else if (G.mode === 'claim') {
+      text = text || (T && T.claim) || W.two(G.claim.t);
+      buttons = back;
+    } else if (G.mode === 'plot-pick') {
+      text = text || W.twoDiagonals;
+      buttons = back;
+    } else if (G.mode === 'plot') {
+      text = text || (T && T.plot) || W.putBack(G.plot.placed.filter((c) => c === NONE).length);
+      buttons = back;
+    }
+    $('prompt').innerHTML = text;
+    $('prompt').className = 'prompt' + (G.warn ? ' warn' : '');
+    $('last').innerHTML = G.last;
+    $('actions').innerHTML = buttons;
+    G.note = ''; G.warn = false;
+  }
+
+  // ----- sliding relics -----
+  // Every relic is unique, so after each redraw a relic that has moved is
+  // flown from where it was to where it is now.
+
+  let pace = 400; // milliseconds for a relic to fly; slower for the opponent's moves
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function places() {
+    const m = {};
+    document.querySelectorAll('[data-card]').forEach((el) => { m[el.dataset.card] = el.getBoundingClientRect(); });
+    return m;
+  }
+  function ghostOf(el, r) { // r is in the stage's own coordinates
+    const g = el.cloneNode(true), turn = el.style.getPropertyValue('--turn');
+    g.className = el.className.replace(/\b(fresh|can|sel|lit|hint)\b/g, '') + ' ghost';
+    for (const a of ['data-card', 'data-src', 'data-dst', 'data-act']) g.removeAttribute(a);
+    g.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;aspect-ratio:auto;margin:0;z-index:50;pointer-events:none;transform-origin:0 0`;
+    if (turn) g.style.setProperty('--turn', turn);
+    stage.appendChild(g);
+    return g;
+  }
+  function slide(old, was) {
+    document.querySelectorAll('.ghost').forEach((g) => g.remove());
+    // relics just put down in the realm make rings: as they land, or at once if they do not fly
+    const wet = new Set(SKIN.ripple ? (G.splash || []).map(String) : []), flying = new Set();
+    G.splash = null;
+    setTimeout(() => wet.forEach((card) => {
+      const el = !flying.has(card) && document.querySelector(`#board [data-card="${card}"]`);
+      if (el && !calm) ripple(local(el.getBoundingClientRect()));
+    }), 0);
+    if (calm || !old || !document.body.animate || was !== q) return; // no flights while the screen itself is turning
+    document.querySelectorAll('[data-card]').forEach((el) => {
+      const seen = old[el.dataset.card];
+      if (!seen) {
+        el.animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'none' }],
+          { duration: 320, easing: 'ease-out' }); // no delay or fill: if it never runs, the relic is simply there
+        return;
+      }
+      const from = local(seen), to = local(el.getBoundingClientRect());
+      const dx = to.left - from.left, dy = to.top - from.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(to.width - from.width) < 1) return;
+      const g = ghostOf(el, from);
+      el.style.visibility = 'hidden';
+      const fly = g.animate(
+        [{ transform: 'none' }, { transform: `translate(${dx}px,${dy}px) scale(${to.width / from.width},${to.height / from.height})` }],
+        { duration: pace, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      const c = el.dataset.card;
+      if (c in G.turnedFrom) {
+        try {
+          g.animate([{ transform: `rotate(${G.turnedFrom[c]}deg)` }, { transform: `rotate(${G.angle[c]}deg)` }],
+            { duration: pace, easing: 'ease-out', pseudoElement: '::after' });
+        } catch (e) { /* the leaf simply arrives at its new angle */ }
+      }
+      let landed = false;
+      const land = () => { if (landed) return; landed = true; g.remove(); el.style.visibility = ''; if (wet.has(el.dataset.card)) ripple(to); };
+      flying.add(el.dataset.card);
+      fly.onfinish = land; fly.oncancel = land;
+      setTimeout(land, pace + 80); // in case the animation never reports back, e.g. in a background tab
+    });
+  }
+  // rings spreading on the water where something has just come down
+  function ripple(r) {
+    for (let i = 0; i < 3; i++) {
+      const ring = document.createElement('div');
+      ring.className = 'ripple';
+      ring.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;animation-delay:${i * 0.22}s`;
+      $('ripples').appendChild(ring);
+      setTimeout(() => ring.remove(), 2200 + i * 220);
+    }
+  }
+  function render() {
+    const old = Object.assign(places(), G.flyFrom || {}), was = q;
+    G.flyFrom = null;
+    fit();
+    draw();
+    slide(old, was);
+    G.turnedFrom = {};
+    pace = 400;
+  }
+
+  // ----- playing moves -----
+
+  function describe(who, before, m, after) {
+    const p = before.toMove, Who = who === 0 ? 'You' : 'The opponent';
+    if (m[0] === 'pass') return W.log.pass(Who);
+    if (m[0] === 'claim') {
+      const c = TS.faceUp(before, m[1]);
+      return m[2] === null ? W.log.claim(Who, c) : m[2] === c ? W.log.sent(Who, c) : W.log.claimSent(Who, c, m[2]);
+    }
+    const had = Array.from(before.hands[p]).filter((c) => c !== NONE);
+    const took = Array.from(after.hands[p]).filter((c) => c !== NONE && !had.includes(c));
+    const left = had.filter((c) => !Array.from(after.hands[p]).includes(c));
+    return took.length ? W.log.plotted(Who, took, left) : W.log.rearranged(Who);
+  }
+
+  function play(m) {
+    const before = G.s;
+    const hit = TS.successors(before).find((t) => same(t.m, m));
+    if (!hit) { say(W.notAllowed); return render(); }
+    if (G.tut && !TUTORIAL[G.tut.step].expect(m, hit.s)) {
+      const nope = TUTORIAL[G.tut.step].nope;
+      reset(); say(nope);
+      return render();
+    }
+    commit(before, hit, before.toMove);
+  }
+
+  function commit(before, hit, who) {
+    let was = before, now = hit.s;
+    TS.flip(now);
+    // each player reads the last move as the other's
+    G.last = describe(G.two ? 1 : who, before, hit.m, now);
+    if (G.two && now.winner < 0) { was = turnRound(before); now = turnRound(now); G.turned = !G.turned; }
+    const fr = {};
+    const splash = [];
+    for (let x = now.lo; x <= now.hi; x++) for (let r = 0; r < 3; r++) {
+      const c = now.cells[TS.cid(r, x)];
+      if (c !== was.cells[TS.cid(r, x)]) { fr[key(r, x)] = 1; if (c !== NONE) splash.push(c); }
+    }
+    for (let t = 0; t < 4; t++) {
+      if (now.hands[0][t] !== was.hands[0][t]) fr['m' + t] = 1;
+      if (now.hands[1][t] !== was.hands[1][t]) fr['o' + t] = 1;
+      if (TS.faceUp(now, t) !== TS.faceUp(was, t)) fr['d' + t] = 1;
+    }
+    // relics already set down during a plot have had their rings
+    G.splash = (G.splash || []).concat(splash.filter((c) => !(G.plot && G.plot.placed.includes(c))));
+    G.s = now; G.fresh = fr; G.stage = null; reset();
+    if (G.tut && who === 0) G.tut.step++;
+    if (now.winner >= 0) {
+      document.body.classList.remove('flash');
+      void document.body.offsetWidth;
+      document.body.classList.add('flash');
+    }
+    render();
+    if (!G.two && now.winner < 0 && now.toMove === 1) opponentSoon();
+  }
+
+  // The opponent moves in two steps where there are two: relics come up into
+  // its hand, then go down into the realm.
+  function opponentSoon() {
+    setTimeout(() => {
+      const s = G.s;
+      if (s.winner >= 0 || s.toMove !== 1) return;
+      const succ = TS.successors(s);
+      const T = G.tut && TUTORIAL[G.tut.step - 1];
+      const hit = T ? succ.find(T.reply) : succ[TS.choose(s, succ, { net: NET, depth: G.depth, rivalry: 0 })];
+      const m = hit.m, stacks = [[], [], [], []];
+      for (let t = 0; t < 4; t++) if (s.hands[1][t] !== NONE) stacks[t].push(s.hands[1][t]);
+      let stage = null;
+      if (m[0] === 'claim' && m[2] !== null) {
+        stacks[m[1]].push(TS.faceUp(s, m[1]));
+        stage = { stacks, lifted: m[1], holes: [] };
+      } else if (m[0] === 'plot') {
+        for (const [r, x] of m[1]) { const c = s.cells[TS.cid(r, x)]; stacks[ctype(c)].push(c); }
+        stage = { stacks, lifted: -1, holes: m[1].map(([r, x]) => key(r, x)) };
+      }
+      pace = 900;
+      if (!stage) return commit(s, hit, 1);
+      G.stage = stage;
+      render();
+      setTimeout(() => { if (G.s === s) { pace = 900; commit(s, hit, 1); } }, 1700);
+    }, 700);
+  }
+
+  // Pick up a diagonal: its three relics join my hand and must be replaced.
+  function startPlot(line) {
+    const cells = line.map(([r, x]) => G.s.cells[TS.cid(r, x)]);
+    const mine = Array.from(G.s.hands[0]).filter((c) => c !== NONE);
+    reset();
+    G.mode = 'plot';
+    G.plot = { line, orig: cells, placed: [NONE, NONE, NONE], pool: mine.concat(cells) };
+  }
+  // The plot is made when the third relic goes down.
+  function settlePlot() {
+    const P = G.plot;
+    if (P.placed.some((c) => c === NONE)) return render();
+    const kinds = P.pool.map(ctype);
+    const twice = kinds.find((t, i) => kinds.indexOf(t) !== i);
+    if (twice !== undefined) { say(W.wouldHoldTwo(twice)); return render(); }
+    if (P.placed.every((c, i) => c === P.orig[i])) { reset(); G.note = W.backAsWas; return render(); }
+    play(['plot', P.line, P.placed.slice()]);
+  }
+
+  // One relic moved from a source to a target, by drag or by two taps.
+  function move(src, dst) {
+    const s = G.s;
+    G.hint = null; G.beam = null;
+    if (src.k === 'deck' && G.mode === 'idle') {
+      const t = src.t, c = TS.faceUp(s, t), held = s.hands[0][t];
+      if (G.tut && TUTORIAL[G.tut.step].deck !== t) { say(TUTORIAL[G.tut.step].nope); return render(); }
+      if (dst.k === 'hand') {
+        if (held === NONE) return play(['claim', t, null, null]);
+        G.mode = 'claim'; G.claim = { t, c, held }; G.pick = null;
+        return render();
+      }
+      if (dst.k === 'cell') {
+        if (held !== NONE) return play(['claim', t, c, [dst.r, dst.x]]);
+        say(W.noKindYet(t));
+      }
+      return render();
+    }
+    if (G.mode === 'claim' && src.k === 'hand' && dst.k === 'cell') return play(['claim', G.claim.t, src.card, [dst.r, dst.x]]);
+    if (G.mode === 'plot') {
+      const P = G.plot;
+      if (src.k === 'hand' && dst.k === 'place') {
+        const i = P.pool.indexOf(src.card);
+        if (i >= 0) {
+          P.pool.splice(i, 1);
+          if (P.placed[dst.i] !== NONE) P.pool.push(P.placed[dst.i]);
+          P.placed[dst.i] = src.card;
+          G.splash = [src.card];
+        }
+      } else if (src.k === 'place' && dst.k === 'place') {
+        [P.placed[src.i], P.placed[dst.i]] = [P.placed[dst.i], P.placed[src.i]];
+        G.splash = [P.placed[src.i], P.placed[dst.i]].filter((c) => c !== NONE);
+      } else if (src.k === 'place' && dst.k === 'hand' && P.placed[src.i] !== NONE) {
+        P.pool.push(P.placed[src.i]); P.placed[src.i] = NONE;
+      }
+      G.pick = null;
+      return settlePlot();
+    }
+    G.pick = null;
+    render();
+  }
+  function legal(src, kind) {
+    if (src.k === 'deck') return kind === 'hand' || (kind === 'cell' && G.s.hands[0][src.t] !== NONE);
+    if (src.k === 'hand') return G.mode === 'claim' ? kind === 'cell' : kind === 'place';
+    return kind === 'place' || kind === 'hand';
+  }
+
+  // The move the Regent would make in my seat, and why when the reason is sharp.
+  function hint() {
+    const s = G.s, succ = TS.successors(s);
+    const hit = succ[TS.choose(s, succ, { net: NET, depth: 4, rivalry: 0 })];
+    const m = hit.m, after = hit.s;
+    const Hn = W.hint;
+    let text;
+    if (m[0] === 'pass') text = Hn.pass;
+    else if (m[0] === 'claim') {
+      const c = TS.faceUp(s, m[1]);
+      const where = m[3] && `the ${m[3][1] < 0 ? 'left' : 'right'} end of ${Hn.rows[m[3][0]]}`;
+      text = m[2] === null ? Hn.claim(c) : m[2] === c ? Hn.send(c, where) : Hn.claimSend(c, m[2], where);
+    } else text = Hn.plot(s.cells[TS.cid(m[1][0][0], m[1][0][1])], m[2][0], m[2][1], m[2][2]);
+    let why = '';
+    if (after.winner === 0) why = Hn.wins;
+    else if (TS.canWinNow(s, 1) && !TS.canWinNow(after, 1)) why = Hn.stops;
+    else if (m[0] !== 'pass' && TS.forcedWin(after, 0)) why = Hn.noAnswer;
+    G.hint = { m };
+    G.note = text + why;
+  }
+
+  const srcOf = (el) => ({ k: el.dataset.src, t: +el.dataset.t, card: +el.dataset.card, i: +el.dataset.i });
+  const dstOf = (el) => ({ k: el.dataset.dst, r: +el.dataset.r, x: +el.dataset.x, i: +el.dataset.i });
+  const samePick = (src) => G.pick && G.pick.k === src.k && (src.k === 'hand' ? G.pick.card === src.card : G.pick.i === src.i);
+  let begun = false; // has a game been chosen yet? (a table is laid behind the start screen before that)
+  function showTitle() {
+    $('go-resume').hidden = !begun || !G || G.s.winner >= 0;
+    $('mode-choice').hidden = false; $('level-choice').hidden = true;
+    $('title').hidden = false;
+  }
+
+  // ----- taps -----
+
+  let justDragged = false;
+  document.addEventListener('click', (e) => {
+    if (justDragged || !G) return;
+    const actEl = e.target.closest('[data-act]');
+    if (actEl && actEl.dataset.act === 'menu') return showTitle();
+    if (actEl && actEl.dataset.act === 'rules') { $('rules').hidden = false; return; }
+    if (!myTurn()) return;
+    if (actEl) {
+      const act = actEl.dataset.act;
+      if (act === 'pass') return play(['pass']);
+      if (act === 'cancel') { reset(); return render(); }
+      if (act === 'hint') { hint(); return render(); }
+      if (act === 'trigger') {
+        const x = +actEl.dataset.x, lines = triggers()[x];
+        if (lines.length === 1) startPlot(lines[0]);
+        else { reset(); G.mode = 'plot-pick'; G.lines = { x, lines }; }
+        return render();
+      }
+      if (act === 'peek') {
+        // a relic on my row I cannot plot from: show its diagonals and say why
+        const x = +actEl.dataset.x, c = G.s.cells[TS.cid(2, x)];
+        const full = (d) => G.s.cells[TS.cid(1, x + d)] !== NONE && G.s.cells[TS.cid(0, x + 2 * d)] !== NONE;
+        const held = TS.handMask(G.s.hands[0]) & (1 << house(c));
+        G.hint = null;
+        G.beam = [-1, 1].map((d) => [[2, x], [1, x + d], [0, x + 2 * d]]);
+        G.note = !full(-1) && !full(1) ? W.peekNeither : held ? W.peekIncomplete : W.peekNoStake(house(c));
+        return render();
+      }
+      if (act === 'line') { startPlot(G.lines.lines[+actEl.dataset.li]); return render(); }
+      return;
+    }
+    const srcEl = e.target.closest('[data-src]'), dstEl = e.target.closest('[data-dst]');
+    const src = srcEl && srcOf(srcEl);
+    if (G.pick && G.pick.k === 'place' && src && src.k === 'hand') return move(G.pick, { k: 'hand' });
+    if (G.pick && dstEl && !(src && samePick(src)) && !(G.pick.k === 'hand' && dstEl.dataset.dst === 'hand')) {
+      return move(G.pick, dstOf(dstEl));
+    }
+    if (!src) return;
+    if (src.k === 'deck') { G.note = W.dragToPick; return render(); } // a pick is a drag, never a tap
+    if (samePick(src) && src.k === 'hand' && G.mode === 'plot') {
+      // tapped twice: send it to the next empty place on the diagonal
+      const i = G.plot.placed.indexOf(NONE);
+      if (i >= 0) return move(src, { k: 'place', i });
+    }
+    G.pick = samePick(src) ? null : src;
+    render();
+  });
+
+  // ----- drag and drop: only legal targets light up, and they pull a little -----
+
+  let drag = null;
+  function endDrag() {
+    if (!drag) return;
+    if (drag.ghost) drag.ghost.remove();
+    document.querySelectorAll('.over, .target').forEach((el) => el.classList.remove('over', 'target'));
+    document.body.classList.remove('dragging');
+    drag = null;
+  }
+  function nearest(x, y) {
+    let best = null, bestD = L.cw * 0.8;
+    for (const el of drag.targets) {
+      const r = el.getBoundingClientRect();
+      const d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+      if (d < bestD || (d === 0 && el.dataset.dst !== 'hand')) { best = el; bestD = d; }
+    }
+    return best;
+  }
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('[data-src]');
+    if (!el || !G || !myTurn() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    drag = { el, id: e.pointerId, x0: e.clientX, y0: e.clientY, ghost: null, targets: [] };
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if (!drag.ghost) {
+      if (Math.hypot(dx, dy) < 7) return;
+      const src = srcOf(drag.el);
+      drag.ghost = ghostOf(drag.el, local(drag.el.getBoundingClientRect()));
+      drag.ghost.style.zIndex = 60;
+      drag.el.style.opacity = '.25';
+      drag.targets = [...document.querySelectorAll('[data-dst]')].filter((t) => t !== drag.el && legal(src, t.dataset.dst));
+      drag.targets.forEach((t) => t.classList.add('target'));
+      document.body.classList.add('dragging');
+    }
+    const [lx, ly] = localMove(dx, dy);
+    drag.ghost.style.transform = `translate(${lx}px,${ly}px) scale(1.08)`;
+    document.querySelectorAll('.over').forEach((el) => el.classList.remove('over'));
+    const t = nearest(e.clientX, e.clientY);
+    if (t && t.dataset.dst !== 'hand') t.classList.add('over');
+    e.preventDefault();
+  });
+  document.addEventListener('pointerup', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag.ghost) { drag = null; return; } // a tap: the click handler deals with it
+    const src = srcOf(drag.el), card = drag.el.dataset.card;
+    const t = nearest(e.clientX, e.clientY);
+    G.flyFrom = { [card]: drag.ghost.getBoundingClientRect() }; // slide on from where it was dropped
+    endDrag();
+    justDragged = true; setTimeout(() => { justDragged = false; }, 60);
+    if (t) move(src, dstOf(t)); else render();
+  });
+  document.addEventListener('pointercancel', () => { if (drag && drag.ghost) { endDrag(); render(); } else drag = null; });
+
+  // ----- title screen, resize, keeping a game across a republish -----
+
+  $('go-single').addEventListener('click', () => { $('mode-choice').hidden = true; $('level-choice').hidden = false; });
+  $('level-back').addEventListener('click', () => { $('mode-choice').hidden = false; $('level-choice').hidden = true; });
+  document.querySelectorAll('[data-depth]').forEach((b) => b.addEventListener('click', () => {
+    $('title').hidden = true; begun = true;
+    deal(+b.dataset.depth, false); // you always move first
+  }));
+  $('go-two').addEventListener('click', () => { $('title').hidden = true; begun = true; deal(4, true); });
+  $('go-tutorial').addEventListener('click', () => { $('title').hidden = true; begun = true; tutorial(); });
+  $('rules-close').addEventListener('click', () => { $('rules').hidden = true; });
+  $('go-resume').addEventListener('click', () => { $('title').hidden = true; render(); });
+  let resizing = 0;
+  window.addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { fit(); if (G && !drag) draw(); }, 80); });
+
+  const pack = () => (G && !G.tut ? {
+    v: 3, depth: G.depth, last: G.last, two: G.two, turned: G.turned,
+    s: { ...G.s, cells: Array.from(G.s.cells), hands: G.s.hands.map((h) => Array.from(h)) },
+  } : {});
+  function start(saved) {
+    fit();
+    if (saved && saved.v === 3 && saved.s) {
+      const s = saved.s;
+      G = Object.assign({
+        s: { ...s, cells: Uint8Array.from(s.cells), hands: s.hands.map((h) => Uint8Array.from(h)) },
+        depth: saved.depth, last: saved.last || '', tut: null, two: !!saved.two, turned: !!saved.turned,
+      }, blank());
+      $('title').hidden = true; begun = true;
+      render();
+      if (!G.two && G.s.winner < 0 && G.s.toMove === 1) opponentSoon();
+    } else deal(4, false); // a table is laid behind the title screen, ready to play
+  }
+  const hot = window.claude && window.claude.hot;
+  if (hot && hot.snapshot) hot.snapshot(pack);
+  if (hot && hot.ready) hot.ready(start); else start(hot && hot.data);
+  window.__ts = { get G() { return G; }, tutorial, turnRound, move };
+})();
+</script>
+</body>
+</html>

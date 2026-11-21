@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+{{FONTS}}
+<style>
+/* One visual world: a storm-dark table. Five rows of relics: the opponent's
+   hand, the three rows of the realm, your hand. Reliquary on the left, a
+   narrow panel of words and buttons on the right. Light marks what is live. */
+:root {
+  color-scheme: dark;
+  --ink: #120e17;
+  --stone: #1c1723;
+  --edge: #3b3247;
+  --bone: #ece5d8;
+  --dim: #a297ad;
+  --storm: #b5d0ff;
+  --warn: #ffb58a;
+  --display: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  --cw: 40px;
+  --ar: 9 / 14;      /* relic shape, width / height */
+  --glow: 181, 208, 255;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background:
+    var(--grain),
+    radial-gradient(90% 38% at 70% -6%, rgba(150, 170, 230, .20), transparent 70%),
+    radial-gradient(120% 70% at 50% 0%, #2a1f36 0%, var(--ink) 62%) var(--ink);
+  background-blend-mode: soft-light, normal, normal;
+  background-attachment: fixed;
+  color: var(--bone);
+  font: 400 16px/1.35 var(--body);
+  min-height: 100%;
+  -webkit-user-select: none; user-select: none;
+}
+h2 { font: 400 14px/1 var(--display); letter-spacing: .16em; color: var(--dim); margin: 0; }
+button { font: inherit; color: inherit; }
+.btn {
+  background: rgba(255, 255, 255, .04); border: 1px solid var(--edge); border-radius: 10px;
+  padding: 8px 12px; cursor: pointer; font-weight: 500;
+}
+.btn:hover { border-color: var(--dim); }
+.btn.primary { background: var(--storm); border-color: var(--storm); color: #10131c; font-weight: 700; }
+.btn:disabled { opacity: .4; cursor: default; }
+:focus-visible { outline: 2px solid var(--storm); outline-offset: 2px; }
+
+/* ----- the table ----- */
+.table { display: flex; gap: 10px; align-items: center; justify-content: center; padding: 4px 12px; width: 100%; max-width: 1100px; margin: 0 auto; }
+.rel { display: grid; gap: 6px; width: calc(var(--cw) + 20px); flex: none; padding-left: 20px; }
+.pile { position: relative; }
+/* the relics beneath each face-up one show as card edges running out to the left */
+.pile::before {
+  content: ""; position: absolute; top: 2px; bottom: 2px; right: calc(100% - 1px); width: calc(var(--k) * 2px);
+  background: repeating-linear-gradient(to left, #8a7f97 0 1px, #1b1622 1px 2px); border-radius: 3px 0 0 3px;
+}
+.board {
+  position: relative; flex: none; border-radius: 6px;
+  background: var(--grain), radial-gradient(70% 60% at 50% 50%, #2c2338 0%, #17121d 100%);
+  background-blend-mode: soft-light, normal;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, .75), 0 0 0 1px var(--edge);
+}
+.board > .card, .board > .slot, .board > .zone { position: absolute; }
+.board > .card, .board > .slot { width: var(--cw); }
+.board .rowmark { position: absolute; left: 0; right: 0; border-top: 1px solid rgba(255, 255, 255, .07); pointer-events: none; }
+.board svg.beams { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; mix-blend-mode: screen; }
+.beam { stroke: var(--storm); stroke-width: 6; stroke-linecap: round; opacity: .5; filter: drop-shadow(0 0 5px var(--storm)) drop-shadow(0 0 14px #fff); }
+.beam.dim { stroke: var(--dim); stroke-width: 3; stroke-dasharray: 3 9; opacity: .8; filter: none; }
+.side { width: 150px; flex: none; display: flex; flex-direction: column; gap: 8px; align-self: stretch; padding: 4px 0; }
+.side .prompt { margin: 0; text-wrap: balance; }
+.side .prompt.warn { color: var(--warn); }
+.side .last { margin: 0; color: var(--dim); font-size: 14px; -webkit-user-select: text; user-select: text; }
+.side .grow { flex: 1; }
+/* the table's buttons: a grid of equal size */
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.actions .btn { width: 100%; min-height: 40px; padding: 6px 4px; }
+.actions .btn:only-child { grid-column: 1 / -1; }
+.side .words { display: flex; flex-direction: column; gap: 8px; }
+/* Always landscape: on a screen held upright the whole stage is turned on its
+   side, so turning the phone shows the game the right way up. */
+body.rot { overflow: hidden; }
+body.rot #stage { position: fixed; overflow: auto; }
+/* two players: the words turn to face whoever is to move; the pieces stay as they are */
+body.turned .side, body.turned .title-inner { transform: rotate(180deg); }
+
+/* ----- relics ----- */
+.card, .slot {
+  position: relative; width: 100%; aspect-ratio: var(--ar); border-radius: 4px; padding: 0;
+  display: grid; place-items: center;
+}
+.slot { border: 1px dashed var(--edge); color: var(--edge); background: rgba(0, 0, 0, .18); }
+.slot svg { width: 46%; height: 46%; fill: currentColor; opacity: .7; }
+.slot.faint { opacity: .4; }
+/* relic art: one sheet, ten houses across and four kinds down */
+.card {
+  border: 1px solid rgba(0, 0, 0, .7); background-color: var(--h);
+  background-image: url(cards.jpg); background-size: 1000% 400%;
+  background-position: calc(var(--hx) * 11.1111%) calc(var(--ty) * 33.3333%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .6);
+  cursor: default; overflow: hidden;
+  transition: filter .25s, transform .2s;
+}
+.card .kind {
+  position: absolute; right: 4%; bottom: 3%; width: 32%; aspect-ratio: 1; border-radius: 50%;
+  background: rgba(10, 8, 14, .72); display: grid; place-items: center; pointer-events: none;
+}
+.card .kind svg { width: 62%; height: 62%; fill: #f1ebdf; }
+.card.back { background-image: url(backs.jpg); background-size: 400% 100%; background-position: calc(var(--ty) * 33.3333%) 0; }
+.t0 { --ty: 0; } .t1 { --ty: 1; } .t2 { --ty: 2; } .t3 { --ty: 3; }
+/* houses in the order of the printed deck: Cleric, Necromancer, Warrior, Paladin, Monk,
+   Assassin, Wizard, Bard, Swashbuckler, Barbarian; --h and --g colour their names */
+.h0 { --hx: 0; --h: #c98a2b; --g: #17130a; } .h1 { --hx: 1; --h: #3a3b3d; --g: #fff; }
+.h2 { --hx: 2; --h: #b3283a; --g: #fff; }    .h3 { --hx: 3; --h: #5d3f86; --g: #fff; }
+.h4 { --hx: 4; --h: #a04a35; --g: #fff; }    .h5 { --hx: 5; --h: #2f4a80; --g: #fff; }
+.h6 { --hx: 6; --h: #2f9fb6; --g: #0d1a1e; } .h7 { --hx: 7; --h: #2f5a34; --g: #fff; }
+.h8 { --hx: 8; --h: #1f8a63; --g: #fff; }    .h9 { --hx: 9; --h: #9a9c9e; --g: #14161a; }
+.chip { display: inline-block; padding: 0 5px; border-radius: 3px; background: var(--h); color: var(--g); font-weight: 500; white-space: nowrap; }
+
+/* ----- light: what is live glows, the rest falls back ----- */
+[data-src] { touch-action: none; cursor: grab; }
+button.card, button.slot, [data-dst] { cursor: pointer; }
+.can { filter: drop-shadow(0 0 4px var(--storm)) drop-shadow(0 0 11px rgba(var(--glow), .75)); transform: translateY(-2px); animation: breathe 2.6s ease-in-out infinite; }
+@keyframes breathe { 50% { filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 18px var(--storm)); } }
+.slot.lit, body.dragging .slot.target {
+  opacity: 1; border: 1px solid rgba(var(--glow), .7);
+  background: radial-gradient(circle at 50% 50%, rgba(var(--glow), .38), rgba(var(--glow), .05) 70%);
+  box-shadow: 0 0 14px rgba(var(--glow), .35);
+}
+.sel { filter: drop-shadow(0 0 5px #fff) drop-shadow(0 0 16px #fff); transform: translateY(-4px); }
+.hint { filter: drop-shadow(0 0 5px #ffd98a) drop-shadow(0 0 16px #ffb347); animation: none; }
+.slot.hint { opacity: 1; border: 1px solid #ffd98a; background: radial-gradient(circle at 50% 50%, rgba(255, 200, 110, .45), transparent 72%); }
+.over { filter: drop-shadow(0 0 6px var(--warn)) drop-shadow(0 0 18px var(--warn)) !important; }
+.focus .card:not(.lit):not(.can):not(.sel):not(.ghost) { filter: brightness(.38) saturate(.6); }
+.zone.target { border-radius: 6px; background: radial-gradient(60% 120% at 50% 50%, rgba(var(--glow), .16), transparent 75%); }
+.fresh { animation: fresh 1.6s ease-out; }
+@keyframes fresh { 0% { filter: drop-shadow(0 0 8px var(--warn)) drop-shadow(0 0 20px var(--warn)); } 100% { filter: none; } }
+.ghost { box-shadow: 0 8px 18px rgba(0, 0, 0, .65); filter: none !important; animation: none !important; transition: none; }
+.flash::after { content: ""; position: fixed; inset: 0; background: #dfe9ff; pointer-events: none; animation: flash .9s ease-out forwards; z-index: 80; }
+@keyframes flash { 0% { opacity: 0; } 8% { opacity: .75; } 16% { opacity: .1; } 26% { opacity: .55; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .can { animation: none; } .fresh { animation: none; } .flash::after { animation: none; opacity: 0; }
+  .card { transition: none; }
+}
+
+/* ----- title screen and panels ----- */
+.title {
+  position: fixed; inset: 0; z-index: 70; overflow: auto; display: grid; place-items: center; padding: 16px;
+  background: var(--grain), radial-gradient(100% 80% at 50% 0%, #2a1f36 0%, #0d0a11 75%);
+  background-blend-mode: soft-light, normal;
+}
+.title[hidden] { display: none; }
+.title-inner { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 320px); gap: 22px; align-items: center; max-width: 660px; }
+.title-inner img { width: 100%; border-radius: 6px; box-shadow: 0 10px 40px rgba(0, 0, 0, .8), 0 0 60px rgba(150, 170, 230, .18); }
+.title-inner .controls { display: flex; flex-direction: column; gap: 14px; }
+.title-inner p { margin: 0; color: var(--dim); max-width: 34ch; }
+@media (max-width: 560px) and (orientation: landscape) { .title-inner { grid-template-columns: minmax(0, 300px); justify-content: center; } }
+@media (max-height: 430px) { .title-inner img { max-height: 78vh; width: auto; justify-self: end; } }
+.title-inner { position: relative; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choices[hidden] { display: none; }
+.choices .btn { min-height: 44px; }
+#mode-choice #go-tutorial, #level-choice #level-back { grid-column: 1 / -1; }
+#level-choice { grid-template-columns: 1fr 1fr 1fr; }
+.close {
+  position: absolute; top: -14px; right: -14px; width: 38px; height: 38px; border-radius: 50%; padding: 0; z-index: 1;
+  background: var(--stone); border: 1px solid var(--edge); cursor: pointer; font-size: 22px; line-height: 1;
+}
+.close[hidden] { display: none; }
+.won { font: 400 21px/1.2 var(--display); letter-spacing: .06em; color: var(--bone); }
+/* the rules, as a sheet over the game */
+.title-inner.sheet { display: block; max-width: 64ch; max-height: 100%; overflow: auto; color: var(--dim); -webkit-user-select: text; user-select: text; }
+.title-inner.sheet p { max-width: none; margin: .6em 0; }
+/* the table sits in the middle of the screen */
+#stage { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; }
+body.rot #stage { min-height: 0; }
+/*SKINCSS*/
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="g0" viewBox="0 0 24 24"><path d="M12 1.5 14.2 5v9.5H9.8V5zM6.5 14.5h11v2.2h-11zM10.9 16.7h2.2v3.6h-2.2z"/><circle cx="12" cy="21.4" r="1.5"/></symbol>
+  <symbol id="g1" viewBox="0 0 24 24"><path d="M12 2 20 4.8v6.4c0 5-3.4 8.4-8 10.8-4.6-2.4-8-5.8-8-10.8V4.8z"/></symbol>
+  <symbol id="g2" viewBox="0 0 24 24"><path d="M12 2.5c4.7 0 8.2 3.7 8.2 8.3V21h-5.4v-5.2l1.8-1.7v-2.4H7.4v2.400l1.8 1.700V21H3.800V10.800c0-4.600 3.500-8.300 8.200-8.300z"/></symbol>
+  <symbol id="g3" viewBox="0 0 24 24"><path d="M12 8.2 18.4 14 12 22 5.600 14z"/><path d="M12 1.800a3.300 3.300 0 1 1 0 6.600 3.300 3.300 0 0 1 0-6.600zm0 1.700a1.600 1.600 0 1 0 0 3.200 1.600 1.600 0 0 0 0-3.200z"/></symbol>
+</svg>
+
+<div id="stage">
+<section class="title" id="title">
+  <div class="title-inner">
+    <button class="close" id="go-resume" type="button" aria-label="Back to the game" hidden>&times;</button>
+    {{HERO}}
+    <div class="controls">
+      <p>{{TAGLINE}}</p>
+      <div class="choices" id="mode-choice">
+        <button class="btn primary" id="go-single" type="button">Single Player</button>
+        <button class="btn primary" id="go-two" type="button">Two Players</button>
+        <button class="btn" id="go-tutorial" type="button">Tutorial</button>
+      </div>
+      <div class="choices" id="level-choice" hidden>
+        <button class="btn primary" type="button" data-depth="1">{{S1}}</button>
+        <button class="btn primary" type="button" data-depth="2">{{S2}}</button>
+        <button class="btn primary" type="button" data-depth="4">{{S4}}</button>
+        <button class="btn" id="level-back" type="button">Back</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="title" id="rules" hidden>
+  <div class="title-inner sheet">
+    <button class="close" id="rules-close" type="button" aria-label="Close the rules">&times;</button>
+    <h2>How to play</h2>
+{{RULES}}
+  </div>
+</section>
+
+<div id="ripples" aria-hidden="true"></div>
+<main class="table" id="table">
+  <div class="rel" id="reliquary" aria-label="{{PILES}}"></div>
+  <div class="board" id="board" aria-label="{{TABLE}}"></div>
+  <aside class="side">
+    <div class="words">
+      <p class="prompt" id="prompt" aria-live="polite"></p>
+      <p class="last" id="last"></p>
+    </div>
+    <div class="grow"></div>
+    <div class="actions" id="actions"></div>
+  </aside>
+</main>
+
+</div>
+
+<script>/*ENGINE*/</script>
+<script>/*SKIN*/</script>
+<script>
+(function () {
+  'use strict';
+  const NONE = TS.NONE, house = TS.house, ctype = TS.ctype;
+  const KIND = SKIN.kinds, HOUSE = SKIN.houses, W = SKIN.words;
+  const NET = TS.loadNet(Uint8Array.from(atob('WEIGHTS'), (c) => c.charCodeAt(0)));
+  const $ = (id) => document.getElementById(id);
+  const key = (r, x) => r + ',' + x;
+  const nameOf = SKIN.name, chip = SKIN.chip;
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+  // G.mode: idle | claim (holding two of a kind, one must go to the realm) |
+  //         plot-pick (choosing between two diagonals) | plot (diagonal picked up)
+  // G.stage: the opponent part-way through a move, for showing it in two steps
+  let G = null;
+  const blank = () => ({ angle: Array.from({ length: 48 }, () => Math.floor(Math.random() * 360)), where: {}, turnedFrom: {},
+    mode: 'idle', pick: null, claim: null, plot: null, lines: null, stage: null, beam: null, hint: null,
+    fresh: {}, note: '', warn: false, flyFrom: null });
+  const myTurn = () => G.s.toMove === 0 && G.s.winner < 0 && !G.stage;
+  const say = (text) => { G.note = text; G.warn = true; };
+  const reset = () => { G.mode = 'idle'; G.pick = null; G.claim = null; G.plot = null; G.lines = null; G.beam = null; G.hint = null; };
+
+  function deal(depth, two) {
+    const s = TS.newState(10, Math.random);
+    G = Object.assign({ s, depth, last: '', tut: null, two: !!two, turned: false }, blank());
+    render();
+  }
+
+  // ----- tutorial: a fixed position and three steps that end in a win -----
+
+  const TUTORIAL = [
+    { deck: 2, expect: (m) => same(m, ['claim', 2, null, null]), reply: (t) => t.m[0] === 'claim' && t.m[1] === 3 },
+    { deck: 0, expect: (m) => same(m, ['claim', 0, 28, [0, 2]]), reply: (t) => t.m[0] === 'claim' && t.m[1] === 2 && t.m[2] === null },
+    { deck: -1, expect: (m, after) => after.winner === 0 },
+  ].map((step, i) => Object.assign(step, W.tutorial[i]));
+  function tutorial() {
+    const s = TS.newState(10, Math.random);
+    s.cells.fill(NONE);
+    [[0, 0, 39], [1, -1, 3], [1, 1, 19], [2, 0, 27]].forEach(([r, x, c]) => { s.cells[TS.cid(r, x)] = c; });
+    s.decks = [[0, 4, 12, 16, 20, 32, 36, 24], [5, 9, 17, 21, 29, 33, 37, 1], [2, 6, 10, 14, 18, 22, 30, 34, 38, 26], [11, 15, 23, 31, 35]];
+    s.dlen = s.decks.map((d) => d.length);
+    s.hands[0].set([28, 25, NONE, 7]);
+    s.hands[1].set([8, 13, NONE, NONE]);
+    G = Object.assign({ s, depth: 1, last: '', tut: { step: 0 }, two: false, turned: false }, blank());
+    render();
+  }
+
+  // ----- what is where right now -----
+
+  function view() {
+    const s = G.s;
+    const V = { me: [[], [], [], []], opp: [[], [], [], []], lifted: -1, hole: {}, put: {} };
+    for (let t = 0; t < 4; t++) {
+      if (s.hands[0][t] !== NONE) V.me[t].push(s.hands[0][t]);
+      if (s.hands[1][t] !== NONE) V.opp[t].push(s.hands[1][t]);
+    }
+    if (G.mode === 'claim') { V.me[G.claim.t].push(G.claim.c); V.lifted = G.claim.t; }
+    if (G.mode === 'plot') {
+      V.me = [[], [], [], []];
+      for (const c of G.plot.pool) V.me[ctype(c)].push(c);
+      G.plot.line.forEach(([r, x], i) => { if (G.plot.placed[i] === NONE) V.hole[key(r, x)] = i; else V.put[key(r, x)] = i; });
+    }
+    if (G.stage) {
+      V.opp = G.stage.stacks; V.lifted = G.stage.lifted;
+      for (const k of G.stage.holes) V.hole[k] = -1;
+    }
+    return V;
+  }
+
+  function triggers() {
+    // x of each relic on my row of the realm that I can plot from, with its complete diagonals
+    const out = {};
+    if (G.mode !== 'idle' || !myTurn()) return out;
+    const mask = TS.handMask(G.s.hands[0]);
+    for (const line of TS.lines(G.s, 0)) {
+      const c = G.s.cells[TS.cid(line[0][0], line[0][1])];
+      if (mask & (1 << house(c))) (out[line[0][1]] = out[line[0][1]] || []).push(line);
+    }
+    return out;
+  }
+
+  // ----- drawing -----
+
+  // On an upright screen the stage lies on its side, so the game is always
+  // landscape. q counts quarter turns clockwise; local() converts a rectangle
+  // on the screen into the stage's own coordinates.
+  const stage = $('stage');
+  let rot = false, q = 0;
+  // In a two-player game, is it the turn of the player on the far side? The pieces
+  // stay where they are; the position is only read from the other side.
+  const far = () => !!(G && G.turned);
+  function fit() {
+    const Wd = window.innerWidth, Ht = window.innerHeight, st = stage.style;
+    rot = Ht > Wd;
+    q = rot ? 1 : 0;
+    document.body.classList.toggle('turned', far()); // only the words turn to face the far player
+    document.body.classList.toggle('rot', q !== 0);
+    st.width = q % 2 ? Ht + 'px' : q ? Wd + 'px' : '';
+    st.height = q % 2 ? Wd + 'px' : q ? Ht + 'px' : '';
+    st.left = q === 1 ? Wd + 'px' : q ? '0px' : '';
+    st.top = q === 3 ? Ht + 'px' : q ? '0px' : '';
+    st.transformOrigin = q === 2 ? '50% 50%' : '0 0';
+    st.transform = q ? `rotate(${q * 90}deg)` : '';
+  }
+  const tableHeight = () => (rot ? window.innerWidth : window.innerHeight);
+  function local(r) {
+    const Wd = window.innerWidth, Ht = window.innerHeight;
+    if (q === 1) return { left: r.top, top: Wd - r.right, width: r.height, height: r.width };
+    if (q === 2) return { left: Wd - r.right, top: Ht - r.bottom, width: r.width, height: r.height };
+    if (q === 3) return { left: Ht - r.bottom, top: r.left, width: r.height, height: r.width };
+    return r;
+  }
+  const localMove = (dx, dy) => [[dx, dy], [dy, -dx], [-dx, -dy], [-dy, dx]][q];
+
+  // Two players at one screen: after each move the position is turned round in
+  // the model, so the player to move is always "player 0". It is then drawn
+  // from the far side, so nothing moves on the screen.
+  function turnRound(s) {
+    const n = TS.clone(s);
+    n.cells.fill(NONE);
+    for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) {
+      const c = s.cells[TS.cid(r, x)];
+      if (c !== NONE) n.cells[TS.cid(2 - r, -x)] = c;
+    }
+    n.lo = -s.hi; n.hi = -s.lo;
+    n.hands = [s.hands[1].slice(), s.hands[0].slice()];
+    n.toMove = 1 - s.toMove;
+    n.winner = s.winner < 0 ? -1 : 1 - s.winner;
+    return n;
+  }
+
+  let L = { cw: 40, ch: 62, g: 5, x0: 300, bw: 600, pitch: 70, rowTop: [6, 73, 140, 207, 274] };
+  function layout() {
+    const s = G.s, board = $('board');
+    // how far the realm reaches to the left and right of its centre, in half-steps;
+    // each side grows in steps of two, so the table rarely rescales
+    let left = 0, right = 0;
+    const seen = (x) => { if (x < 0) left = Math.max(left, -x); else right = Math.max(right, x); };
+    for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) if (s.cells[TS.cid(r, x)] !== NONE) seen(x);
+    for (const [, x] of TS.openSlots(s)) seen(x);
+    left = Math.max(4, Math.ceil(left / 2) * 2); right = Math.max(4, Math.ceil(right / 2) * 2);
+    if (far()) [left, right] = [right, left];
+    const span = (left + right) / 2; // pieces across, less one
+    const g = SKIN.gap, k = SKIN.rowPitch, gh = SKIN.handGap;
+    const wide = $('table').clientWidth - 24, high = tableHeight();
+    // across: piles (a piece + 20), the table (span + 1 pieces), the words (150), two gaps of 10
+    const byWidth = (wide - 20 - 20 - 150 - 12 - span * g) / (span + 2);
+    // down: five rows: hand, three realm rows (pitch k), hand
+    const byHeight = ((high - 20 - 2 * k * g - 2 * gh) / (3 + 2 * k)) / SKIN.ratio;
+    const cw = Math.floor(Math.max(22, Math.min(SKIN.maxWidth, byWidth, byHeight)));
+    document.documentElement.style.setProperty('--cw', cw + 'px');
+    const bw = Math.ceil(span * (cw + g) + cw + 12);
+    board.style.width = bw + 'px';
+    const x0 = 6 + cw / 2 + left * (cw + g) / 2;
+    const ch = Math.round(cw * SKIN.ratio);
+    const realm = 6 + ch + gh, step = (ch + g) * k;
+    const rowTop = [6, realm, realm + step, realm + 2 * step, realm + 2 * step + ch + gh];
+    L = { cw, ch, g, x0, bw, pitch: Math.min(cw * SKIN.handPitch, (bw - cw) / 3.2), rowTop };
+    board.style.height = rowTop[4] + ch + 6 + 'px';
+  }
+  const at = (row, left) => `style="left:${left.toFixed(1)}px;top:${L.rowTop[row].toFixed(1)}px"`;
+  // the mover's side of the position is drawn at the bottom, or at the top for the far player
+  const cellPos = (r, x) => (far() ? at(3 - r, L.x0 - x * (L.cw + L.g) / 2 - L.cw / 2) : at(r + 1, L.x0 + x * (L.cw + L.g) / 2 - L.cw / 2));
+  const myRow = () => (far() ? 0 : 4), oppRow = () => (far() ? 4 : 0);
+  const spot = (r, x) => (far() ? key(2 - r, -x) : key(r, x)); // a place in the realm, as it lies on the screen
+  // Where the relics of a hand sit. Relics of one kind overlap by only a tenth,
+  // so each stays readable and easy to pick; the row closes up if space is short.
+  function handRow(stacks) {
+    const n = stacks.map((st) => Math.max(1, st.length));
+    const extra = n.reduce((a, b) => a + b - 1, 0), room = L.bw - 12;
+    let gap = L.pitch - L.cw, step = L.cw * 0.9;
+    const width = () => 4 * L.cw + extra * step + 3 * gap;
+    if (width() > room) gap = Math.max(4, (room - 4 * L.cw - extra * step) / 3);
+    if (width() > room && extra) step = Math.max(L.cw * 0.3, (room - 4 * L.cw - 3 * gap) / extra);
+    const starts = [];
+    // centred on the realm's centre where there is room, otherwise kept inside the table
+    let x = Math.max(6, Math.min(L.bw - 6 - width(), L.x0 - width() / 2));
+    for (let t = 0; t < 4; t++) { starts.push(x); x += L.cw + (n[t] - 1) * step + gap; }
+    return (t, i) => starts[t] + i * step;
+  }
+
+  function cardHtml(c, attrs, cls, where) {
+    const live = attrs && /data-(src|dst|act)/.test(attrs);
+    const tag = live ? 'button' : 'div';
+    return `<${tag}${live ? ' type="button"' : ''} class="card h${house(c)} t${ctype(c)} ${cls || ''}" data-card="${c}" data-at="${where}" ${attrs || ''} aria-label="${nameOf(c)}">${SKIN.badge(c)}</${tag}>`;
+  }
+  function slotHtml(t, attrs, cls) {
+    const live = attrs && /data-(src|dst|act)/.test(attrs);
+    const tag = live ? 'button' : 'div';
+    const label = t === null ? W.emptyPlace : W.noKind(t);
+    return `<${tag}${live ? ' type="button"' : ''} class="slot ${cls || ''}" ${attrs || ''} aria-label="${label}">${t === null ? '' : SKIN.slot(t)}</${tag}>`;
+  }
+  const picked = (k, v) => G.pick && G.pick.k === k && (k === 'hand' ? G.pick.card === v : G.pick.i === v);
+
+  function draw() {
+    layout();
+    const s = G.s, V = view(), trig = triggers(), H = G.hint;
+    $('table').classList.toggle('focus', G.mode !== 'idle' || !!G.stage);
+
+    // reliquary
+    $('reliquary').innerHTML = [0, 1, 2, 3].map((t) => {
+      const lifted = V.lifted === t;
+      const c = lifted ? NONE : TS.faceUp(s, t);
+      const beneath = Math.max(0, s.dlen[t] - 1 - (lifted ? 1 : 0));
+      let inner;
+      if (lifted && s.dlen[t] > 1) inner = `<div class="card back t${t}" aria-label="${W.faceDown}"></div>`;
+      else if (c === NONE) inner = slotHtml(t);
+      else {
+        const live = myTurn() && G.mode === 'idle';
+        let cls = (G.fresh['d' + t] ? 'fresh' : '') + (live ? ' can' : '');
+        if (H && H.m[0] === 'claim' && H.m[1] === t) cls += ' hint';
+        inner = cardHtml(c, live ? `data-src="deck" data-t="${t}"` : null, cls, 'pile' + t);
+      }
+      return `<div class="pile" style="--k:${beneath};${SKIN.pileStyle(beneath)}" aria-label="${W.pile(t, beneath)}">${inner}</div>`;
+    }).join('');
+
+    let html = `<div class="zone" id="hand-zone" data-dst="hand" style="left:0;right:0;top:${L.rowTop[myRow()] - 3}px;height:${L.ch + 6}px"></div>`;
+    html += `<div class="rowmark" style="top:${(L.rowTop[0] + L.ch + L.rowTop[1]) / 2}px"></div><div class="rowmark" style="top:${(L.rowTop[3] + L.ch + L.rowTop[4]) / 2}px"></div>`;
+
+    // hands: the opponent's on the top row, mine on the bottom
+    const oppLeft = handRow(V.opp), meLeft = handRow(V.me);
+    for (let t = 0; t < 4; t++) {
+      if (!V.opp[t].length) html += slotHtml(t, at(oppRow(), oppLeft(t, 0)));
+      V.opp[t].forEach((c, i) => { html += cardHtml(c, at(oppRow(), oppLeft(t, i)), (G.fresh['o' + t] ? 'fresh' : '') + (G.stage ? ' lit' : ''), 'hand' + oppRow()); });
+      if (!V.me[t].length) html += slotHtml(t, at(myRow(), meLeft(t, 0)));
+      V.me[t].forEach((c, i) => {
+        let cls = G.fresh['m' + t] ? 'fresh' : '', attrs = '';
+        if (G.mode === 'plot' || (G.mode === 'claim' && G.claim.t === t)) {
+          attrs = 'data-src="hand" ';
+          cls += picked('hand', c) ? ' sel' : G.mode === 'claim' ? ' can' : ' lit';
+        }
+        if (H && H.m[0] === 'claim' && H.m[2] === c) cls += ' hint';
+        html += cardHtml(c, attrs + at(myRow(), meLeft(t, i)), cls, 'hand' + myRow());
+      });
+    }
+
+    // the realm
+    const choice = {};
+    if (G.mode === 'plot-pick') G.lines.lines.forEach((line, li) => { for (const [r, x] of line.slice(1)) choice[key(r, x)] = li; });
+    const open = TS.openSlots(s);
+    let lo = s.lo, hi = s.hi;
+    for (const [, x] of open) { lo = Math.min(lo, x); hi = Math.max(hi, x); }
+    for (let x = lo; x <= hi; x++) for (let r = 0; r < 3; r++) {
+      const k = key(r, x);
+      if (k in V.put) {
+        const i = V.put[k];
+        html += cardHtml(G.plot.placed[i], `data-src="place" data-dst="place" data-i="${i}" ${cellPos(r, x)}`, picked('place', i) ? 'sel' : 'lit', spot(r, x));
+        continue;
+      }
+      if (k in V.hole) {
+        const i = V.hole[k];
+        html += i >= 0 ? slotHtml(null, `data-dst="place" data-i="${i}" ${cellPos(r, x)}`, 'lit') : slotHtml(null, cellPos(r, x), 'lit');
+        continue;
+      }
+      const c = s.cells[TS.cid(r, x)];
+      if (c === NONE) continue;
+      let cls = G.fresh[k] ? 'fresh' : '', attrs = '';
+      if (G.mode === 'idle' && myTurn() && r === 2) {
+        attrs = `data-act="${trig[x] ? 'trigger' : 'peek'}" data-x="${x}" `;
+        if (trig[x]) cls += ' can';
+      } else if (k in choice) { attrs = `data-act="line" data-li="${choice[k]}" `; cls += ' can'; }
+      else if (G.mode === 'plot-pick' && r === 2 && x === G.lines.x) cls += ' sel';
+      if (H && H.m[0] === 'plot' && H.m[1].some(([hr, hx]) => hr === r && hx === x)) cls += ' hint';
+      html += cardHtml(c, attrs + cellPos(r, x), cls, spot(r, x));
+    }
+    if (myTurn() && (G.mode === 'idle' || G.mode === 'claim')) {
+      for (const [r, x] of open) {
+        let cls = G.mode === 'claim' ? 'lit' : 'faint';
+        if (H && H.m[0] === 'claim' && H.m[3] && H.m[3][0] === r && H.m[3][1] === x) cls += ' hint';
+        html += slotHtml(null, `data-dst="cell" data-r="${r}" data-x="${x}" ${cellPos(r, x)}`, cls);
+      }
+    }
+
+    // beams of light along diagonals, drawn over the relics
+    const beams = [];
+    const mid = (r, x) => (far() ? [L.x0 - x * (L.cw + L.g) / 2, L.rowTop[3 - r] + L.ch / 2] : [L.x0 + x * (L.cw + L.g) / 2, L.rowTop[r + 1] + L.ch / 2]);
+    const addBeam = (line, dim) => {
+      const a = mid(line[0][0], line[0][1]), b = mid(line[2][0], line[2][1]);
+      beams.push(`<line class="beam ${dim ? 'dim' : ''}" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/>`);
+    };
+    if (G.mode === 'plot') addBeam(G.plot.line);
+    if (G.mode === 'plot-pick') G.lines.lines.forEach((l) => addBeam(l));
+    if (G.beam) G.beam.forEach((b) => addBeam(b, true));
+    if (H && H.m[0] === 'plot') addBeam(H.m[1]);
+    html += `<svg class="beams" aria-hidden="true">${beams.join('')}</svg>`;
+    $('board').innerHTML = html;
+    if (SKIN.spin) {
+      // no leaf has a right way up: each lies at the angle it landed at, until it is moved again
+      document.querySelectorAll('[data-card][data-at]').forEach((el) => {
+        const c = el.dataset.card, at = el.dataset.at;
+        if (G.where[c] !== undefined && G.where[c] !== at) { G.turnedFrom[c] = G.angle[c]; G.angle[c] = Math.floor(Math.random() * 360); }
+        G.where[c] = at;
+        el.style.setProperty('--turn', G.angle[c] + 'deg');
+      });
+    }
+
+    // words and buttons
+    let text = G.note, buttons = '';
+    const T = G.tut && TUTORIAL[G.tut.step];
+    const back = '<button class="btn" type="button" data-act="cancel">Put back</button>';
+    const menu = '<button class="btn" type="button" data-act="rules">Rules</button><button class="btn" type="button" data-act="menu">Menu</button>';
+    if (s.winner >= 0) {
+      text = `<span class="won">${W.won(s.winner === 0, house(s.hands[s.winner][0]))}</span>${G.tut ? W.wholeGame : ''}`;
+      buttons = `<button class="btn primary" type="button" data-act="menu">${G.tut ? 'Play a real game' : 'Play again'}</button>`;
+    } else if (!myTurn()) text = text || W.thinking;
+    else if (G.mode === 'idle') {
+      text = text || (T ? T.idle : W.yourTurn);
+      buttons = T ? menu : `<button class="btn" type="button" data-act="hint">Hint</button><button class="btn" type="button" data-act="pass">Pass</button>${menu}`;
+    } else if (G.mode === 'claim') {
+      text = text || (T && T.claim) || W.two(G.claim.t);
+      buttons = back;
+    } else if (G.mode === 'plot-pick') {
+      text = text || W.twoDiagonals;
+      buttons = back;
+    } else if (G.mode === 'plot') {
+      text = text || (T && T.plot) || W.putBack(G.plot.placed.filter((c) => c === NONE).length);
+      buttons = back;
+    }
+    $('prompt').innerHTML = text;
+    $('prompt').className = 'prompt' + (G.warn ? ' warn' : '');
+    $('last').innerHTML = G.last;
+    $('actions').innerHTML = buttons;
+    G.note = ''; G.warn = false;
+  }
+
+  // ----- sliding relics -----
+  // Every relic is unique, so after each redraw a relic that has moved is
+  // flown from where it was to where it is now.
+
+  let pace = 400; // milliseconds for a relic to fly; slower for the opponent's moves
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function places() {
+    const m = {};
+    document.querySelectorAll('[data-card]').forEach((el) => { m[el.dataset.card] = el.getBoundingClientRect(); });
+    return m;
+  }
+  function ghostOf(el, r) { // r is in the stage's own coordinates
+    const g = el.cloneNode(true), turn = el.style.getPropertyValue('--turn');
+    g.className = el.className.replace(/\b(fresh|can|sel|lit|hint)\b/g, '') + ' ghost';
+    for (const a of ['data-card', 'data-src', 'data-dst', 'data-act']) g.removeAttribute(a);
+    g.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;aspect-ratio:auto;margin:0;z-index:50;pointer-events:none;transform-origin:0 0`;
+    if (turn) g.style.setProperty('--turn', turn);
+    stage.appendChild(g);
+    return g;
+  }
+  function slide(old, was) {
+    document.querySelectorAll('.ghost').forEach((g) => g.remove());
+    // relics just put down in the realm make rings: as they land, or at once if they do not fly
+    const wet = new Set(SKIN.ripple ? (G.splash || []).map(String) : []), flying = new Set();
+    G.splash = null;
+    setTimeout(() => wet.forEach((card) => {
+      const el = !flying.has(card) && document.querySelector(`#board [data-card="${card}"]`);
+      if (el && !calm) ripple(local(el.getBoundingClientRect()));
+    }), 0);
+    if (calm || !old || !document.body.animate || was !== q) return; // no flights while the screen itself is turning
+    document.querySelectorAll('[data-card]').forEach((el) => {
+      const seen = old[el.dataset.card];
+      if (!seen) {
+        el.animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'none' }],
+          { duration: 320, easing: 'ease-out' }); // no delay or fill: if it never runs, the relic is simply there
+        return;
+      }
+      const from = local(seen), to = local(el.getBoundingClientRect());
+      const dx = to.left - from.left, dy = to.top - from.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(to.width - from.width) < 1) return;
+      const g = ghostOf(el, from);
+      el.style.visibility = 'hidden';
+      const fly = g.animate(
+        [{ transform: 'none' }, { transform: `translate(${dx}px,${dy}px) scale(${to.width / from.width},${to.height / from.height})` }],
+        { duration: pace, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      const c = el.dataset.card;
+      if (c in G.turnedFrom) {
+        try {
+          g.animate([{ transform: `rotate(${G.turnedFrom[c]}deg)` }, { transform: `rotate(${G.angle[c]}deg)` }],
+            { duration: pace, easing: 'ease-out', pseudoElement: '::after' });
+        } catch (e) { /* the leaf simply arrives at its new angle */ }
+      }
+      let landed = false;
+      const land = () => { if (landed) return; landed = true; g.remove(); el.style.visibility = ''; if (wet.has(el.dataset.card)) ripple(to); };
+      flying.add(el.dataset.card);
+      fly.onfinish = land; fly.oncancel = land;
+      setTimeout(land, pace + 80); // in case the animation never reports back, e.g. in a background tab
+    });
+  }
+  // rings spreading on the water where something has just come down
+  function ripple(r) {
+    for (let i = 0; i < 3; i++) {
+      const ring = document.createElement('div');
+      ring.className = 'ripple';
+      ring.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;animation-delay:${i * 0.22}s`;
+      $('ripples').appendChild(ring);
+      setTimeout(() => ring.remove(), 2200 + i * 220);
+    }
+  }
+  function render() {
+    const old = Object.assign(places(), G.flyFrom || {}), was = q;
+    G.flyFrom = null;
+    fit();
+    draw();
+    slide(old, was);
+    G.turnedFrom = {};
+    pace = 400;
+  }
+
+  // ----- playing moves -----
+
+  function describe(who, before, m, after) {
+    const p = before.toMove, Who = who === 0 ? 'You' : 'The opponent';
+    if (m[0] === 'pass') return W.log.pass(Who);
+    if (m[0] === 'claim') {
+      const c = TS.faceUp(before, m[1]);
+      return m[2] === null ? W.log.claim(Who, c) : m[2] === c ? W.log.sent(Who, c) : W.log.claimSent(Who, c, m[2]);
+    }
+    const had = Array.from(before.hands[p]).filter((c) => c !== NONE);
+    const took = Array.from(after.hands[p]).filter((c) => c !== NONE && !had.includes(c));
+    const left = had.filter((c) => !Array.from(after.hands[p]).includes(c));
+    return took.length ? W.log.plotted(Who, took, left) : W.log.rearranged(Who);
+  }
+
+  function play(m) {
+    const before = G.s;
+    const hit = TS.successors(before).find((t) => same(t.m, m));
+    if (!hit) { say(W.notAllowed); return render(); }
+    if (G.tut && !TUTORIAL[G.tut.step].expect(m, hit.s)) {
+      const nope = TUTORIAL[G.tut.step].nope;
+      reset(); say(nope);
+      return render();
+    }
+    commit(before, hit, before.toMove);
+  }
+
+  function commit(before, hit, who) {
+    let was = before, now = hit.s;
+    TS.flip(now);
+    // each player reads the last move as the other's
+    G.last = describe(G.two ? 1 : who, before, hit.m, now);
+    if (G.two && now.winner < 0) { was = turnRound(before); now = turnRound(now); G.turned = !G.turned; }
+    const fr = {};
+    const splash = [];
+    for (let x = now.lo; x <= now.hi; x++) for (let r = 0; r < 3; r++) {
+      const c = now.cells[TS.cid(r, x)];
+      if (c !== was.cells[TS.cid(r, x)]) { fr[key(r, x)] = 1; if (c !== NONE) splash.push(c); }
+    }
+    for (let t = 0; t < 4; t++) {
+      if (now.hands[0][t] !== was.hands[0][t]) fr['m' + t] = 1;
+      if (now.hands[1][t] !== was.hands[1][t]) fr['o' + t] = 1;
+      if (TS.faceUp(now, t) !== TS.faceUp(was, t)) fr['d' + t] = 1;
+    }
+    // relics already set down during a plot have had their rings
+    G.splash = (G.splash || []).concat(splash.filter((c) => !(G.plot && G.plot.placed.includes(c))));
+    G.s = now; G.fresh = fr; G.stage = null; reset();
+    if (G.tut && who === 0) G.tut.step++;
+    if (now.winner >= 0) {
+      document.body.classList.remove('flash');
+      void document.body.offsetWidth;
+      document.body.classList.add('flash');
+    }
+    render();
+    if (!G.two && now.winner < 0 && now.toMove === 1) opponentSoon();
+  }
+
+  // The opponent moves in two steps where there are two: relics come up into
+  // its hand, then go down into the realm.
+  function opponentSoon() {
+    setTimeout(() => {
+      const s = G.s;
+      if (s.winner >= 0 || s.toMove !== 1) return;
+      const succ = TS.successors(s);
+      const T = G.tut && TUTORIAL[G.tut.step - 1];
+      const hit = T ? succ.find(T.reply) : succ[TS.choose(s, succ, { net: NET, depth: G.depth, rivalry: 0 })];
+      const m = hit.m, stacks = [[], [], [], []];
+      for (let t = 0; t < 4; t++) if (s.hands[1][t] !== NONE) stacks[t].push(s.hands[1][t]);
+      let stage = null;
+      if (m[0] === 'claim' && m[2] !== null) {
+        stacks[m[1]].push(TS.faceUp(s, m[1]));
+        stage = { stacks, lifted: m[1], holes: [] };
+      } else if (m[0] === 'plot') {
+        for (const [r, x] of m[1]) { const c = s.cells[TS.cid(r, x)]; stacks[ctype(c)].push(c); }
+        stage = { stacks, lifted: -1, holes: m[1].map(([r, x]) => key(r, x)) };
+      }
+      pace = 900;
+      if (!stage) return commit(s, hit, 1);
+      G.stage = stage;
+      render();
+      setTimeout(() => { if (G.s === s) { pace = 900; commit(s, hit, 1); } }, 1700);
+    }, 700);
+  }
+
+  // Pick up a diagonal: its three relics join my hand and must be replaced.
+  function startPlot(line) {
+    const cells = line.map(([r, x]) => G.s.cells[TS.cid(r, x)]);
+    const mine = Array.from(G.s.hands[0]).filter((c) => c !== NONE);
+    reset();
+    G.mode = 'plot';
+    G.plot = { line, orig: cells, placed: [NONE, NONE, NONE], pool: mine.concat(cells) };
+  }
+  // The plot is made when the third relic goes down.
+  function settlePlot() {
+    const P = G.plot;
+    if (P.placed.some((c) => c === NONE)) return render();
+    const kinds = P.pool.map(ctype);
+    const twice = kinds.find((t, i) => kinds.indexOf(t) !== i);
+    if (twice !== undefined) { say(W.wouldHoldTwo(twice)); return render(); }
+    if (P.placed.every((c, i) => c === P.orig[i])) { reset(); G.note = W.backAsWas; return render(); }
+    play(['plot', P.line, P.placed.slice()]);
+  }
+
+  // One relic moved from a source to a target, by drag or by two taps.
+  function move(src, dst) {
+    const s = G.s;
+    G.hint = null; G.beam = null;
+    if (src.k === 'deck' && G.mode === 'idle') {
+      const t = src.t, c = TS.faceUp(s, t), held = s.hands[0][t];
+      if (G.tut && TUTORIAL[G.tut.step].deck !== t) { say(TUTORIAL[G.tut.step].nope); return render(); }
+      if (dst.k === 'hand') {
+        if (held === NONE) return play(['claim', t, null, null]);
+        G.mode = 'claim'; G.claim = { t, c, held }; G.pick = null;
+        return render();
+      }
+      if (dst.k === 'cell') {
+        if (held !== NONE) return play(['claim', t, c, [dst.r, dst.x]]);
+        say(W.noKindYet(t));
+      }
+      return render();
+    }
+    if (G.mode === 'claim' && src.k === 'hand' && dst.k === 'cell') return play(['claim', G.claim.t, src.card, [dst.r, dst.x]]);
+    if (G.mode === 'plot') {
+      const P = G.plot;
+      if (src.k === 'hand' && dst.k === 'place') {
+        const i = P.pool.indexOf(src.card);
+        if (i >= 0) {
+          P.pool.splice(i, 1);
+          if (P.placed[dst.i] !== NONE) P.pool.push(P.placed[dst.i]);
+          P.placed[dst.i] = src.card;
+          G.splash = [src.card];
+        }
+      } else if (src.k === 'place' && dst.k === 'place') {
+        [P.placed[src.i], P.placed[dst.i]] = [P.placed[dst.i], P.placed[src.i]];
+        G.splash = [P.placed[src.i], P.placed[dst.i]].filter((c) => c !== NONE);
+      } else if (src.k === 'place' && dst.k === 'hand' && P.placed[src.i] !== NONE) {
+        P.pool.push(P.placed[src.i]); P.placed[src.i] = NONE;
+      }
+      G.pick = null;
+      return settlePlot();
+    }
+    G.pick = null;
+    render();
+  }
+  function legal(src, kind) {
+    if (src.k === 'deck') return kind === 'hand' || (kind === 'cell' && G.s.hands[0][src.t] !== NONE);
+    if (src.k === 'hand') return G.mode === 'claim' ? kind === 'cell' : kind === 'place';
+    return kind === 'place' || kind === 'hand';
+  }
+
+  // The move the Regent would make in my seat, and why when the reason is sharp.
+  function hint() {
+    const s = G.s, succ = TS.successors(s);
+    const hit = succ[TS.choose(s, succ, { net: NET, depth: 4, rivalry: 0 })];
+    const m = hit.m, after = hit.s;
+    const Hn = W.hint;
+    let text;
+    if (m[0] === 'pass') text = Hn.pass;
+    else if (m[0] === 'claim') {
+      const c = TS.faceUp(s, m[1]);
+      const where = m[3] && `the ${m[3][1] < 0 ? 'left' : 'right'} end of ${Hn.rows[m[3][0]]}`;
+      text = m[2] === null ? Hn.claim(c) : m[2] === c ? Hn.send(c, where) : Hn.claimSend(c, m[2], where);
+    } else text = Hn.plot(s.cells[TS.cid(m[1][0][0], m[1][0][1])], m[2][0], m[2][1], m[2][2]);
+    let why = '';
+    if (after.winner === 0) why = Hn.wins;
+    else if (TS.canWinNow(s, 1) && !TS.canWinNow(after, 1)) why = Hn.stops;
+    else if (m[0] !== 'pass' && TS.forcedWin(after, 0)) why = Hn.noAnswer;
+    G.hint = { m };
+    G.note = text + why;
+  }
+
+  const srcOf = (el) => ({ k: el.dataset.src, t: +el.dataset.t, card: +el.dataset.card, i: +el.dataset.i });
+  const dstOf = (el) => ({ k: el.dataset.dst, r: +el.dataset.r, x: +el.dataset.x, i: +el.dataset.i });
+  const samePick = (src) => G.pick && G.pick.k === src.k && (src.k === 'hand' ? G.pick.card === src.card : G.pick.i === src.i);
+  let begun = false; // has a game been chosen yet? (a table is laid behind the start screen before that)
+  function showTitle() {
+    $('go-resume').hidden = !begun || !G || G.s.winner >= 0;
+    $('mode-choice').hidden = false; $('level-choice').hidden = true;
+    $('title').hidden = false;
+  }
+
+  // ----- taps -----
+
+  let justDragged = false;
+  document.addEventListener('click', (e) => {
+    if (justDragged || !G) return;
+    const actEl = e.target.closest('[data-act]');
+    if (actEl && actEl.dataset.act === 'menu') return showTitle();
+    if (actEl && actEl.dataset.act === 'rules') { $('rules').hidden = false; return; }
+    if (!myTurn()) return;
+    if (actEl) {
+      const act = actEl.dataset.act;
+      if (act === 'pass') return play(['pass']);
+      if (act === 'cancel') { reset(); return render(); }
+      if (act === 'hint') { hint(); return render(); }
+      if (act === 'trigger') {
+        const x = +actEl.dataset.x, lines = triggers()[x];
+        if (lines.length === 1) startPlot(lines[0]);
+        else { reset(); G.mode = 'plot-pick'; G.lines = { x, lines }; }
+        return render();
+      }
+      if (act === 'peek') {
+        // a relic on my row I cannot plot from: show its diagonals and say why
+        const x = +actEl.dataset.x, c = G.s.cells[TS.cid(2, x)];
+        const full = (d) => G.s.cells[TS.cid(1, x + d)] !== NONE && G.s.cells[TS.cid(0, x + 2 * d)] !== NONE;
+        const held = TS.handMask(G.s.hands[0]) & (1 << house(c));
+        G.hint = null;
+        G.beam = [-1, 1].map((d) => [[2, x], [1, x + d], [0, x + 2 * d]]);
+        G.note = !full(-1) && !full(1) ? W.peekNeither : held ? W.peekIncomplete : W.peekNoStake(house(c));
+        return render();
+      }
+      if (act === 'line') { startPlot(G.lines.lines[+actEl.dataset.li]); return render(); }
+      return;
+    }
+    const srcEl = e.target.closest('[data-src]'), dstEl = e.target.closest('[data-dst]');
+    const src = srcEl && srcOf(srcEl);
+    if (G.pick && G.pick.k === 'place' && src && src.k === 'hand') return move(G.pick, { k: 'hand' });
+    if (G.pick && dstEl && !(src && samePick(src)) && !(G.pick.k === 'hand' && dstEl.dataset.dst === 'hand')) {
+      return move(G.pick, dstOf(dstEl));
+    }
+    if (!src) return;
+    if (src.k === 'deck') { G.note = W.dragToPick; return render(); } // a pick is a drag, never a tap
+    if (samePick(src) && src.k === 'hand' && G.mode === 'plot') {
+      // tapped twice: send it to the next empty place on the diagonal
+      const i = G.plot.placed.indexOf(NONE);
+      if (i >= 0) return move(src, { k: 'place', i });
+    }
+    G.pick = samePick(src) ? null : src;
+    render();
+  });
+
+  // ----- drag and drop: only legal targets light up, and they pull a little -----
+
+  let drag = null;
+  function endDrag() {
+    if (!drag) return;
+    if (drag.ghost) drag.ghost.remove();
+    document.querySelectorAll('.over, .target').forEach((el) => el.classList.remove('over', 'target'));
+    document.body.classList.remove('dragging');
+    drag = null;
+  }
+  function nearest(x, y) {
+    let best = null, bestD = L.cw * 0.8;
+    for (const el of drag.targets) {
+      const r = el.getBoundingClientRect();
+      const d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+      if (d < bestD || (d === 0 && el.dataset.dst !== 'hand')) { best = el; bestD = d; }
+    }
+    return best;
+  }
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('[data-src]');
+    if (!el || !G || !myTurn() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    drag = { el, id: e.pointerId, x0: e.clientX, y0: e.clientY, ghost: null, targets: [] };
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if (!drag.ghost) {
+      if (Math.hypot(dx, dy) < 7) return;
+      const src = srcOf(drag.el);
+      drag.ghost = ghostOf(drag.el, local(drag.el.getBoundingClientRect()));
+      drag.ghost.style.zIndex = 60;
+      drag.el.style.opacity = '.25';
+      drag.targets = [...document.querySelectorAll('[data-dst]')].filter((t) => t !== drag.el && legal(src, t.dataset.dst));
+      drag.targets.forEach((t) => t.classList.add('target'));
+      document.body.classList.add('dragging');
+    }
+    const [lx, ly] = localMove(dx, dy);
+    drag.ghost.style.transform = `translate(${lx}px,${ly}px) scale(1.08)`;
+    document.querySelectorAll('.over').forEach((el) => el.classList.remove('over'));
+    const t = nearest(e.clientX, e.clientY);
+    if (t && t.dataset.dst !== 'hand') t.classList.add('over');
+    e.preventDefault();
+  });
+  document.addEventListener('pointerup', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag.ghost) { drag = null; return; } // a tap: the click handler deals with it
+    const src = srcOf(drag.el), card = drag.el.dataset.card;
+    const t = nearest(e.clientX, e.clientY);
+    G.flyFrom = { [card]: drag.ghost.getBoundingClientRect() }; // slide on from where it was dropped
+    endDrag();
+    justDragged = true; setTimeout(() => { justDragged = false; }, 60);
+    if (t) move(src, dstOf(t)); else render();
+  });
+  document.addEventListener('pointercancel', () => { if (drag && drag.ghost) { endDrag(); render(); } else drag = null; });
+
+  // ----- title screen, resize, keeping a game across a republish -----
+
+  $('go-single').addEventListener('click', () => { $('mode-choice').hidden = true; $('level-choice').hidden = false; });
+  $('level-back').addEventListener('click', () => { $('mode-choice').hidden = false; $('level-choice').hidden = true; });
+  document.querySelectorAll('[data-depth]').forEach((b) => b.addEventListener('click', () => {
+    $('title').hidden = true; begun = true;
+    deal(+b.dataset.depth, false); // you always move first
+  }));
+  $('go-two').addEventListener('click', () => { $('title').hidden = true; begun = true; deal(4, true); });
+  $('go-tutorial').addEventListener('click', () => { $('title').hidden = true; begun = true; tutorial(); });
+  $('rules-close').addEventListener('click', () => { $('rules').hidden = true; });
+  $('go-resume').addEventListener('click', () => { $('title').hidden = true; render(); });
+  let resizing = 0;
+  window.addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { fit(); if (G && !drag) draw(); }, 80); });
+
+  const pack = () => (G && !G.tut ? {
+    v: 3, depth: G.depth, last: G.last, two: G.two, turned: G.turned,
+    s: { ...G.s, cells: Array.from(G.s.cells), hands: G.s.hands.map((h) => Array.from(h)) },
+  } : {});
+  function start(saved) {
+    fit();
+    if (saved && saved.v === 3 && saved.s) {
+      const s = saved.s;
+      G = Object.assign({
+        s: { ...s, cells: Uint8Array.from(s.cells), hands: s.hands.map((h) => Uint8Array.from(h)) },
+        depth: saved.depth, last: saved.last || '', tut: null, two: !!saved.two, turned: !!saved.turned,
+      }, blank());
+      $('title').hidden = true; begun = true;
+      render();
+      if (!G.two && G.s.winner < 0 && G.s.toMove === 1) opponentSoon();
+    } else deal(4, false); // a table is laid behind the title screen, ready to play
+  }
+  const hot = window.claude && window.claude.hot;
+  if (hot && hot.snapshot) hot.snapshot(pack);
+  if (hot && hot.ready) hot.ready(start); else start(hot && hot.data);
+  window.__ts = { get G() { return G; }, tutorial, turnRound, move };
+})();
+</script>
+</body>
+</html>

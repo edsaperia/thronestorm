@@ -1,0 +1,82 @@
+/* Fallen Leaves: leaves floating on the glassy surface of a pond. One
+   background for the whole page; each leaf sits in a faint ring on the water. */
+:root {
+  color-scheme: dark;
+  --ink: #1d2a31; --stone: #162127; --edge: rgba(255, 255, 255, .30); --bone: #eef3f2; --dim: rgba(238, 243, 242, .74);
+  --storm: #ffcf8a; --warn: #ffab8f;
+  --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --ar: 1; --glow: 255, 214, 150;
+}
+body {
+  /* dark, still water under an overcast sky: slate blue-grey, long pale glints where the
+     surface catches the light, slow rings, and the blurred warmth of leaves out of focus */
+  background:
+    radial-gradient(26% 9% at 14% 5%, rgba(214, 120, 52, .30), transparent 72%),
+    radial-gradient(22% 8% at 86% 9%, rgba(200, 104, 44, .26), transparent 72%),
+    radial-gradient(18% 6% at 58% 3%, rgba(190, 96, 40, .18), transparent 72%),
+    radial-gradient(60% 7% at 30% 24%, rgba(160, 184, 196, .16), transparent 70%),
+    radial-gradient(70% 9% at 72% 46%, rgba(150, 176, 190, .12), transparent 70%),
+    radial-gradient(55% 8% at 22% 72%, rgba(140, 168, 182, .10), transparent 70%),
+    repeating-radial-gradient(ellipse 130% 60% at 70% 92%, transparent 0 44px, rgba(190, 210, 220, .05) 45px 47px, transparent 48px 104px),
+    repeating-radial-gradient(ellipse 130% 60% at 10% 58%, transparent 0 68px, rgba(190, 210, 220, .035) 69px 71px, transparent 72px 156px),
+    linear-gradient(176deg, #33454e 0%, #2a3a43 30%, #212f37 62%, #17232a 100%) #212f37;
+  background-attachment: fixed;
+}
+h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
+.btn { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .4); }
+.btn.primary { background: #ffcf8a; border-color: #ffcf8a; color: #1c262c; }
+.side .prompt, .side .last { text-shadow: 0 1px 2px rgba(0, 0, 0, .5); }
+
+/* no board: the table is the pond itself */
+.board { background: none; box-shadow: none; }
+.board .rowmark { display: none; }
+
+/* a leaf on the water: a faint glassy ring, the leaf and its shadow above it */
+.card, .slot { border-radius: 50%; }
+.card {
+  border: 1px solid rgba(220, 235, 240, .30);
+  background: radial-gradient(circle at 36% 28%, rgba(220, 235, 240, .22), rgba(220, 235, 240, .08) 58%, rgba(220, 235, 240, .03));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .40), inset 0 0 10px rgba(255, 255, 255, .08);
+  overflow: visible;
+}
+.card::after {
+  content: ""; position: absolute; inset: -11%; pointer-events: none; /* a leaf may lap over its ring */
+  background-image: url(leaves.webp); background-size: 1000% 400%;
+  background-position: calc(var(--hx) * 11.1111%) calc(var(--ty) * 33.3333%);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55));
+  transform: rotate(var(--turn, 0deg)); /* no leaf has a right way up */
+}
+.card.back { background: radial-gradient(circle at 36% 28%, rgba(255, 255, 255, .35), var(--tint)); }
+.card.back::after { display: none; }
+.slot { border-color: rgba(255, 255, 255, .38); background: rgba(255, 255, 255, .04); }
+.dot { width: 30%; aspect-ratio: 1; border-radius: 50%; background: var(--tint); opacity: .85; box-shadow: 0 0 0 1px rgba(255, 255, 255, .4); }
+.t0, .k0 { --tint: #3f8a3a; } .t1, .k1 { --tint: #cfc526; } .t2, .k2 { --tint: #dd7a1e; } .t3, .k3 { --tint: #a81f2a; }
+.chip { background: var(--tint); color: #fff; }
+.chip.k1 { color: #2f2a05; }
+/* a pile: rims of the leaves beneath, running out to the left */
+.pile::before { top: 0; bottom: 0; left: 0; right: 0; width: auto; border-radius: 50%; background: none; box-shadow: var(--edges); }
+.focus .card:not(.lit):not(.can):not(.sel):not(.ghost) { filter: brightness(.5) saturate(.5); opacity: .75; }
+.ghost { box-shadow: 0 10px 18px rgba(6, 36, 44, .45); }
+.beam { stroke: #fff3c9; opacity: .6; }
+.flash::after { display: none; }
+
+/* settings: a panel over the game, which stays in view behind it */
+.title { background: rgba(10, 16, 20, .45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.title-inner {
+  background: rgba(26, 37, 44, .95); border: 1px solid rgba(255, 255, 255, .22); border-radius: 10px;
+  padding: 22px 24px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+}
+.title-inner p { color: var(--dim); }
+.hero { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.hero h1 { font: italic 500 42px/1 var(--display); margin: 0; text-wrap: balance; text-align: center; }
+.hero-row { display: grid; grid-template-columns: repeat(4, 60px); gap: 8px; }
+.won { font-style: italic; letter-spacing: 0; }
+/* rings on the water where a leaf comes down */
+#ripples { position: absolute; left: 0; top: 0; }
+.ripple {
+  position: fixed; border-radius: 50%; border: 1.5px solid rgba(220, 235, 240, .6); pointer-events: none;
+  opacity: 0; animation: ripple 1.5s ease-out forwards;
+}
+@keyframes ripple { 0% { transform: scale(.75); opacity: .75; } 100% { transform: scale(2.7); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ripple { display: none; } }
+.hero-row .card:nth-child(1) { --turn: -24deg; } .hero-row .card:nth-child(2) { --turn: 31deg; } .hero-row .card:nth-child(3) { --turn: -8deg; } .hero-row .card:nth-child(4) { --turn: 52deg; }
