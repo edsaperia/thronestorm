@@ -385,7 +385,7 @@
 
   const api = {
     NONE, START, cid, house, ctype, newState, clone, faceUp, openSlots, lines,
-    successors, flip, canWinNow, handWins, handMask, features, loadNet, evalNet, choose,
+    successors, flip, canWinNow, handWins, handMask, features, loadNet, evalNet, choose, forcedWin,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TS = api;
