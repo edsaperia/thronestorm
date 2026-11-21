@@ -79,13 +79,10 @@ button { font: inherit; color: inherit; }
 .side .last { margin: 0; color: var(--dim); font-size: 14px; -webkit-user-select: text; user-select: text; }
 .side .grow { flex: 1; }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.turn { margin: 0; color: var(--dim); font-size: 14px; text-align: center; padding: 6px 16px 0; }
-.turn[hidden] { display: none; }
-@media (orientation: portrait) {
-  .table { flex-wrap: wrap; align-items: flex-start; }
-  .side { width: 100%; align-self: auto; }
-  .side .grow { display: none; }
-}
+/* Always landscape: on a screen held upright the whole stage is turned on its
+   side, so turning the phone shows the game the right way up. */
+body.rot { overflow: hidden; }
+body.rot #stage { position: fixed; top: 0; transform-origin: 0 0; transform: rotate(90deg); overflow: auto; }
 
 /* ----- relics ----- */
 .card, .slot {
@@ -157,7 +154,7 @@ button.card, button.slot, [data-dst] { cursor: pointer; }
 .title-inner img { width: 100%; border-radius: 6px; box-shadow: 0 10px 40px rgba(0, 0, 0, .8), 0 0 60px rgba(150, 170, 230, .18); }
 .title-inner .controls { display: flex; flex-direction: column; gap: 14px; }
 .title-inner p { margin: 0; color: var(--dim); max-width: 34ch; }
-@media (max-width: 560px) { .title-inner { grid-template-columns: minmax(0, 300px); justify-content: center; } }
+@media (max-width: 560px) and (orientation: landscape) { .title-inner { grid-template-columns: minmax(0, 300px); justify-content: center; } }
 @media (max-height: 430px) { .title-inner img { max-height: 78vh; width: auto; justify-self: end; } }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .seg { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -174,25 +171,30 @@ details p { margin: .6em 0; }
    background for the whole page; each leaf sits in a faint ring on the water. */
 :root {
   color-scheme: dark;
-  --ink: #2c626b; --stone: #17383e; --edge: rgba(255, 255, 255, .34); --bone: #f4faf7; --dim: rgba(244, 250, 247, .78);
-  --storm: #ffd98a; --warn: #ffb199;
+  --ink: #1d2a31; --stone: #162127; --edge: rgba(255, 255, 255, .30); --bone: #eef3f2; --dim: rgba(238, 243, 242, .74);
+  --storm: #ffcf8a; --warn: #ffab8f;
   --display: "Fraunces", "Iowan Old Style", Georgia, serif;
-  --ar: 1; --glow: 255, 226, 150;
+  --ar: 1; --glow: 255, 214, 150;
 }
 body {
-  /* sky caught in still water: pale where it reflects, deep toward the near bank, a few slow rings */
+  /* dark, still water under an overcast sky: slate blue-grey, long pale glints where the
+     surface catches the light, slow rings, and the blurred warmth of leaves out of focus */
   background:
-    radial-gradient(42% 30% at 22% 8%, rgba(255, 255, 255, .34), transparent 70%),
-    radial-gradient(36% 26% at 82% 18%, rgba(255, 255, 255, .20), transparent 72%),
-    repeating-radial-gradient(circle at 74% 88%, transparent 0 46px, rgba(255, 255, 255, .05) 47px 48px, transparent 49px 110px),
-    repeating-radial-gradient(circle at 12% 62%, transparent 0 70px, rgba(255, 255, 255, .04) 71px 72px, transparent 73px 160px),
-    linear-gradient(172deg, #8fbfc2 0%, #5b98a0 34%, #2f6a74 72%, #1f4f59 100%) #2f6a74;
+    radial-gradient(26% 9% at 14% 5%, rgba(214, 120, 52, .30), transparent 72%),
+    radial-gradient(22% 8% at 86% 9%, rgba(200, 104, 44, .26), transparent 72%),
+    radial-gradient(18% 6% at 58% 3%, rgba(190, 96, 40, .18), transparent 72%),
+    radial-gradient(60% 7% at 30% 24%, rgba(160, 184, 196, .16), transparent 70%),
+    radial-gradient(70% 9% at 72% 46%, rgba(150, 176, 190, .12), transparent 70%),
+    radial-gradient(55% 8% at 22% 72%, rgba(140, 168, 182, .10), transparent 70%),
+    repeating-radial-gradient(ellipse 130% 60% at 70% 92%, transparent 0 44px, rgba(190, 210, 220, .05) 45px 47px, transparent 48px 104px),
+    repeating-radial-gradient(ellipse 130% 60% at 10% 58%, transparent 0 68px, rgba(190, 210, 220, .035) 69px 71px, transparent 72px 156px),
+    linear-gradient(176deg, #33454e 0%, #2a3a43 30%, #212f37 62%, #17232a 100%) #212f37;
   background-attachment: fixed;
 }
 h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
 .btn { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .4); }
-.btn.primary { background: #ffd98a; border-color: #ffd98a; color: #1d3a3f; }
-.side .prompt, .side .last { text-shadow: 0 1px 2px rgba(0, 40, 48, .45); }
+.btn.primary { background: #ffcf8a; border-color: #ffcf8a; color: #1c262c; }
+.side .prompt, .side .last { text-shadow: 0 1px 2px rgba(0, 0, 0, .5); }
 
 /* no board: the table is the pond itself */
 .board { background: none; box-shadow: none; }
@@ -201,16 +203,16 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
 /* a leaf on the water: a faint glassy ring, the leaf and its shadow above it */
 .card, .slot { border-radius: 50%; }
 .card {
-  border: 1px solid rgba(255, 255, 255, .34);
-  background: radial-gradient(circle at 36% 28%, rgba(255, 255, 255, .26), rgba(255, 255, 255, .09) 58%, rgba(255, 255, 255, .03));
-  box-shadow: 0 3px 9px rgba(8, 44, 52, .30), inset 0 0 10px rgba(255, 255, 255, .10);
+  border: 1px solid rgba(220, 235, 240, .30);
+  background: radial-gradient(circle at 36% 28%, rgba(220, 235, 240, .22), rgba(220, 235, 240, .08) 58%, rgba(220, 235, 240, .03));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .40), inset 0 0 10px rgba(255, 255, 255, .08);
   overflow: visible;
 }
 .card::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background-image: url(leaves.webp); background-size: 1000% 400%;
   background-position: calc(var(--hx) * 11.1111%) calc(var(--ty) * 33.3333%);
-  filter: drop-shadow(0 2px 2px rgba(6, 36, 44, .45));
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55));
 }
 .card.back { background: radial-gradient(circle at 36% 28%, rgba(255, 255, 255, .35), var(--tint)); }
 .card.back::after { display: none; }
@@ -221,16 +223,16 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
 .chip.k1 { color: #2f2a05; }
 /* a pile: rims of the leaves beneath, running out to the left */
 .pile::before { top: 0; bottom: 0; left: 0; right: 0; width: auto; border-radius: 50%; background: none; box-shadow: var(--edges); }
-.focus .card:not(.lit):not(.can):not(.sel):not(.ghost) { filter: brightness(.55) saturate(.55); opacity: .8; }
+.focus .card:not(.lit):not(.can):not(.sel):not(.ghost) { filter: brightness(.5) saturate(.5); opacity: .75; }
 .ghost { box-shadow: 0 10px 18px rgba(6, 36, 44, .45); }
 .beam { stroke: #fff3c9; opacity: .6; }
 .flash::after { display: none; }
 
 /* settings: a panel over the game, which stays in view behind it */
-.title { background: rgba(14, 48, 54, .38); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.title { background: rgba(10, 16, 20, .45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
 .title-inner {
-  background: rgba(18, 54, 60, .93); border: 1px solid rgba(255, 255, 255, .3); border-radius: 10px;
-  padding: 22px 24px; box-shadow: 0 18px 50px rgba(4, 28, 34, .55);
+  background: rgba(26, 37, 44, .95); border: 1px solid rgba(255, 255, 255, .22); border-radius: 10px;
+  padding: 22px 24px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
 }
 .title-inner p { color: var(--dim); }
 .hero { display: flex; flex-direction: column; gap: 16px; align-items: center; }
@@ -249,6 +251,7 @@ details summary { letter-spacing: .04em; font-style: italic; font-size: 17px; }
   <symbol id="g3" viewBox="0 0 24 24"><path d="M12 8.2 18.4 14 12 22 5.600 14z"/><path d="M12 1.800a3.300 3.300 0 1 1 0 6.600 3.300 3.300 0 0 1 0-6.600zm0 1.700a1.600 1.600 0 1 0 0 3.200 1.600 1.600 0 0 0 0-3.200z"/></symbol>
 </svg>
 
+<div id="stage">
 <section class="title" id="title">
   <div class="title-inner">
     <div class="hero">
@@ -267,13 +270,6 @@ details summary { letter-spacing: .04em; font-style: italic; font-size: 17px; }
           <label><input type="radio" name="strength" id="st4" value="4" checked><span>Hard</span></label>
         </div>
       </div>
-      <div class="field">
-        <h2>First move</h2>
-        <div class="seg">
-          <label><input type="radio" name="first" id="f0" value="0" checked><span>You</span></label>
-          <label><input type="radio" name="first" id="f1" value="1"><span>Opponent</span></label>
-        </div>
-      </div>
       <div class="actions">
         <button class="btn primary" id="go-play" type="button">Play</button>
         <button class="btn" id="go-tutorial" type="button">Tutorial</button>
@@ -283,7 +279,6 @@ details summary { letter-spacing: .04em; font-style: italic; font-size: 17px; }
   </div>
 </section>
 
-<p class="turn" id="turn" hidden>Turn your phone sideways for a bigger table.</p>
 <main class="table" id="table">
   <div class="rel" id="reliquary" aria-label="Piles of leaves"></div>
   <div class="board" id="board" aria-label="Opponent's leaves, the ground, and your leaves"></div>
@@ -303,6 +298,7 @@ details summary { letter-spacing: .04em; font-style: italic; font-size: 17px; }
   <p><b>Sweep.</b> If a leaf on the ground row nearest you is the same kind as one you hold, tap it to sweep a diagonal rising from it. Its three leaves come up into your hand. Put three back, in any order, from everything you now hold; the sweep is made when the third goes down. You must end with one of each colour. Put them back as they were to change your mind.</p>
   <p>Your opponent sits opposite, so their near row is the top row of the ground. You may also pass.</p>
 </details>
+</div>
 
 <script>// Thronestorm rules, features, value network and move chooser.
 // A port of trainer/src/{game,net,main}.rs; tests/web_check.js verifies it
@@ -713,7 +709,7 @@ window.SKIN = (function () {
     badge: () => '',
     slot: (t) => `<span class="dot k${t}"></span>`,
     // the leaves beneath a pile's top one show as rims running out to the left
-    pileStyle: (n) => '--edges:' + (Array.from({ length: n }, (_, i) => `${-2 * (i + 1)}px 0 0 ${i % 2 ? 'rgba(20,70,78,.55)' : 'rgba(255,255,255,.5)'}`).join(',') || 'none'),
+    pileStyle: (n) => '--edges:' + (Array.from({ length: n }, (_, i) => `${-2 * (i + 1)}px 0 0 ${i % 2 ? 'rgba(10,18,22,.6)' : 'rgba(220,235,240,.45)'}`).join(',') || 'none'),
     words: {
       thinking: 'The opponent is thinking.',
       yourTurn: 'Your turn. Drag a leaf from the piles to your row, or tap a glowing leaf on the ground to sweep.',
@@ -850,6 +846,20 @@ window.SKIN = (function () {
 
   // ----- drawing -----
 
+  // On an upright screen the stage is turned a quarter; these convert between
+  // the screen's coordinates and the stage's own.
+  const stage = $('stage');
+  let rot = false;
+  function fit() {
+    rot = window.innerHeight > window.innerWidth;
+    document.body.classList.toggle('rot', rot);
+    stage.style.width = rot ? window.innerHeight + 'px' : '';
+    stage.style.height = rot ? window.innerWidth + 'px' : '';
+    stage.style.left = rot ? window.innerWidth + 'px' : '';
+  }
+  const tableHeight = () => (rot ? window.innerWidth : window.innerHeight);
+  const local = (r) => (rot ? { left: r.top, top: window.innerWidth - r.right, width: r.height, height: r.width } : r);
+
   let L = { cw: 40, ch: 62, g: 5, x0: 300, pitch: 70, rowTop: [6, 73, 140, 207, 274] };
   function layout() {
     const s = G.s, board = $('board');
@@ -857,10 +867,9 @@ window.SKIN = (function () {
     for (let x = s.lo; x <= s.hi; x++) for (let r = 0; r < 3; r++) if (s.cells[TS.cid(r, x)] !== NONE) reach = Math.max(reach, Math.abs(x));
     for (const [, x] of TS.openSlots(s)) reach = Math.max(reach, Math.abs(x));
     reach = Math.ceil(reach / 3) * 3; // the table grows in steps, so it rarely rescales
-    const landscape = window.innerWidth > window.innerHeight;
     const g = SKIN.gap, k = SKIN.rowPitch, gh = SKIN.handGap;
     // five rows: hand, three realm rows (pitch k), hand
-    const byHeight = landscape ? ((window.innerHeight - 48 - 2 * k * g - 2 * gh + 4 * 5) / (3 + 2 * k)) / SKIN.ratio : 999;
+    const byHeight = ((tableHeight() - 48 - 2 * k * g - 2 * gh + 4 * 5) / (3 + 2 * k)) / SKIN.ratio;
     let bw, byWidth, cw;
     for (let pass = 0; pass < 2; pass++) { // twice: the pile column's width follows the card size
       bw = Math.max(200, board.clientWidth);
@@ -873,7 +882,6 @@ window.SKIN = (function () {
     const rowTop = [6, realm, realm + step, realm + 2 * step, realm + 2 * step + ch + gh];
     L = { cw, ch, g, x0: bw / 2, pitch: Math.min(cw * 1.75, (bw - cw) / 3.6), rowTop };
     board.style.height = rowTop[4] + ch + 6 + 'px';
-    $('turn').hidden = landscape || byWidth >= 34;
   }
   const at = (row, left) => `style="left:${left.toFixed(1)}px;top:${L.rowTop[row].toFixed(1)}px"`;
   const cellPos = (r, x) => at(r + 1, L.x0 + x * (L.cw + L.g) / 2 - L.cw / 2);
@@ -1037,27 +1045,28 @@ window.SKIN = (function () {
     document.querySelectorAll('[data-card]').forEach((el) => { m[el.dataset.card] = el.getBoundingClientRect(); });
     return m;
   }
-  function ghostOf(el, r) {
-    const g = el.cloneNode(true);
+  function ghostOf(el, rect) {
+    const r = local(rect), g = el.cloneNode(true);
     g.className = el.className.replace(/\b(fresh|can|sel|lit|hint)\b/g, '') + ' ghost';
     for (const a of ['data-card', 'data-src', 'data-dst', 'data-act']) g.removeAttribute(a);
     g.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;aspect-ratio:auto;margin:0;z-index:50;pointer-events:none;transform-origin:0 0`;
-    document.body.appendChild(g);
+    stage.appendChild(g);
     return g;
   }
   function slide(old) {
     document.querySelectorAll('.ghost').forEach((g) => g.remove());
     if (calm || !old || !document.body.animate) return;
     document.querySelectorAll('[data-card]').forEach((el) => {
-      const from = old[el.dataset.card], to = el.getBoundingClientRect();
-      if (!from) {
+      const seen = old[el.dataset.card];
+      if (!seen) {
         el.animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'none' }],
           { duration: 280, delay: 220, fill: 'backwards', easing: 'ease-out' });
         return;
       }
+      const from = local(seen), to = local(el.getBoundingClientRect());
       const dx = to.left - from.left, dy = to.top - from.top;
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(to.width - from.width) < 1) return;
-      const g = ghostOf(el, from);
+      const g = ghostOf(el, seen);
       el.style.visibility = 'hidden';
       const fly = g.animate(
         [{ transform: 'none' }, { transform: `translate(${dx}px,${dy}px) scale(${to.width / from.width},${to.height / from.height})` }],
@@ -1327,7 +1336,7 @@ window.SKIN = (function () {
       drag.targets.forEach((t) => t.classList.add('target'));
       document.body.classList.add('dragging');
     }
-    drag.ghost.style.transform = `translate(${dx}px,${dy}px) scale(1.08)`;
+    drag.ghost.style.transform = rot ? `translate(${dy}px,${-dx}px) scale(1.08)` : `translate(${dx}px,${dy}px) scale(1.08)`;
     document.querySelectorAll('.over').forEach((el) => el.classList.remove('over'));
     const t = nearest(e.clientX, e.clientY);
     if (t && t.dataset.dst !== 'hand') t.classList.add('over');
@@ -1349,18 +1358,19 @@ window.SKIN = (function () {
 
   $('go-play').addEventListener('click', () => {
     $('title').hidden = true;
-    deal(+document.querySelector('input[name=strength]:checked').value, +document.querySelector('input[name=first]:checked').value);
+    deal(+document.querySelector('input[name=strength]:checked').value, 0); // you always move first
   });
   $('go-tutorial').addEventListener('click', () => { $('title').hidden = true; tutorial(); });
   $('go-resume').addEventListener('click', () => { $('title').hidden = true; render(); });
   let resizing = 0;
-  window.addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { if (G && !drag) draw(); }, 80); });
+  window.addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { fit(); if (G && !drag) draw(); }, 80); });
 
   const pack = () => (G && !G.tut ? {
     v: 2, depth: G.depth, last: G.last,
     s: { ...G.s, cells: Array.from(G.s.cells), hands: G.s.hands.map((h) => Array.from(h)) },
   } : {});
   function start(saved) {
+    fit();
     if (saved && saved.v === 2 && saved.s) {
       const s = saved.s;
       G = Object.assign({

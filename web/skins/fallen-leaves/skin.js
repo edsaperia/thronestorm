@@ -14,7 +14,7 @@ window.SKIN = (function () {
     badge: () => '',
     slot: (t) => `<span class="dot k${t}"></span>`,
     // the leaves beneath a pile's top one show as rims running out to the left
-    pileStyle: (n) => '--edges:' + (Array.from({ length: n }, (_, i) => `${-2 * (i + 1)}px 0 0 ${i % 2 ? 'rgba(20,70,78,.55)' : 'rgba(255,255,255,.5)'}`).join(',') || 'none'),
+    pileStyle: (n) => '--edges:' + (Array.from({ length: n }, (_, i) => `${-2 * (i + 1)}px 0 0 ${i % 2 ? 'rgba(10,18,22,.6)' : 'rgba(220,235,240,.45)'}`).join(',') || 'none'),
     words: {
       thinking: 'The opponent is thinking.',
       yourTurn: 'Your turn. Drag a leaf from the piles to your row, or tap a glowing leaf on the ground to sweep.',
