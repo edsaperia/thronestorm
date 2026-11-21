@@ -53,7 +53,7 @@ button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--storm); outline-offset: 2px; }
 
 /* ----- the table ----- */
-.table { display: flex; gap: 10px; align-items: center; padding: 8px 12px; max-width: 1100px; margin: 0 auto; }
+.table { display: flex; gap: 10px; align-items: center; padding: 8px 12px; width: 100%; max-width: 1100px; margin: 0 auto; }
 .rel { display: grid; gap: 6px; width: calc(var(--cw) + 20px); flex: none; padding-left: 20px; }
 .pile { position: relative; }
 /* the relics beneath each face-up one show as card edges running out to the left */
@@ -164,9 +164,13 @@ button.card, button.slot, [data-dst] { cursor: pointer; }
 .seg label:has(input:checked) { border-color: var(--storm); }
 .seg label:has(input:focus-visible) { outline: 2px solid var(--storm); outline-offset: 2px; }
 .won { font: 400 21px/1.2 var(--display); letter-spacing: .06em; color: var(--bone); }
-details { color: var(--dim); max-width: 65ch; margin: 18px auto 40px; padding: 0 16px; -webkit-user-select: text; user-select: text; }
-details summary { cursor: pointer; color: var(--bone); font: 400 15px/1 var(--display); letter-spacing: .16em; }
-details p { margin: .6em 0; }
+/* the rules, as a sheet over the game */
+.title-inner.sheet { display: block; max-width: 64ch; max-height: 100%; overflow: auto; color: var(--dim); -webkit-user-select: text; user-select: text; }
+.title-inner.sheet p { max-width: none; margin: .6em 0; }
+.title-inner.sheet .actions { margin-top: 14px; }
+/* the table sits in the middle of the screen */
+#stage { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; }
+body.rot #stage { min-height: 0; }
 /*SKINCSS*/
 </style>
 </head>
@@ -201,6 +205,14 @@ details p { margin: .6em 0; }
   </div>
 </section>
 
+<section class="title" id="rules" hidden>
+  <div class="title-inner sheet">
+    <h2>How to play</h2>
+{{RULES}}
+    <div class="actions"><button class="btn primary" id="rules-close" type="button">Back to the game</button></div>
+  </div>
+</section>
+
 <main class="table" id="table">
   <div class="rel" id="reliquary" aria-label="{{PILES}}"></div>
   <div class="board" id="board" aria-label="{{TABLE}}"></div>
@@ -212,10 +224,6 @@ details p { margin: .6em 0; }
   </aside>
 </main>
 
-<details>
-  <summary>How to play</summary>
-{{RULES}}
-</details>
 </div>
 
 <script>/*ENGINE*/</script>
@@ -468,7 +476,7 @@ details p { margin: .6em 0; }
     let text = G.note, buttons = '';
     const T = G.tut && TUTORIAL[G.tut.step];
     const back = '<button class="btn" type="button" data-act="cancel">Put back</button>';
-    const menu = '<button class="btn" type="button" data-act="menu">Menu</button>';
+    const menu = '<button class="btn" type="button" data-act="rules">Rules</button><button class="btn" type="button" data-act="menu">Menu</button>';
     if (s.winner >= 0) {
       text = `<span class="won">${W.won(s.winner === 0, house(s.hands[s.winner][0]))}</span>${G.tut ? W.wholeGame : ''}`;
       buttons = `<button class="btn primary" type="button" data-act="menu">${G.tut ? 'Play a real game' : 'Play again'}</button>`;
@@ -715,6 +723,7 @@ details p { margin: .6em 0; }
     if (justDragged || !G) return;
     const actEl = e.target.closest('[data-act]');
     if (actEl && actEl.dataset.act === 'menu') return showTitle();
+    if (actEl && actEl.dataset.act === 'rules') { $('rules').hidden = false; return; }
     if (!myTurn()) return;
     if (actEl) {
       const act = actEl.dataset.act;
@@ -819,6 +828,7 @@ details p { margin: .6em 0; }
     deal(+document.querySelector('input[name=strength]:checked').value, 0); // you always move first
   });
   $('go-tutorial').addEventListener('click', () => { $('title').hidden = true; tutorial(); });
+  $('rules-close').addEventListener('click', () => { $('rules').hidden = true; });
   $('go-resume').addEventListener('click', () => { $('title').hidden = true; render(); });
   let resizing = 0;
   window.addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { fit(); if (G && !drag) draw(); }, 80); });

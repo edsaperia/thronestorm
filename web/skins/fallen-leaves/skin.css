@@ -70,4 +70,3 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
 .hero h1 { font: italic 500 42px/1 var(--display); margin: 0; text-wrap: balance; text-align: center; }
 .hero-row { display: grid; grid-template-columns: repeat(4, 60px); gap: 8px; }
 .won { font-style: italic; letter-spacing: 0; }
-details summary { letter-spacing: .04em; font-style: italic; font-size: 17px; }
