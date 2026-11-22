@@ -73,10 +73,33 @@ h2 { letter-spacing: .04em; font-style: italic; font-size: 16px; }
 .won { font-style: italic; letter-spacing: 0; }
 /* rings on the water where a leaf comes down */
 #ripples { position: absolute; left: 0; top: 0; }
-.ripple {
-  position: fixed; border-radius: 50%; border: 1.5px solid rgba(220, 235, 240, .6); pointer-events: none;
-  opacity: 0; animation: ripple 1.5s ease-out forwards;
+/* One ring, drawn as a low ridge in the surface: a pale band lit from the top of the pond with a
+   darker band just inside it. It starts fast and slows, and as it spreads it thickens and fades. */
+.ripple { position: fixed; border-radius: 50%; pointer-events: none; opacity: 0; animation: ripple 2.6s cubic-bezier(.12, .62, .2, 1) forwards; }
+.ripple::before, .ripple::after { content: ""; position: absolute; inset: 0; border-radius: 50%; }
+.ripple::before {
+  background: linear-gradient(to bottom, rgba(232, 244, 248, .85), rgba(232, 244, 248, .30) 50%, rgba(2, 14, 20, .50));
+  -webkit-mask: radial-gradient(closest-side, transparent 89%, #000 94%, #000 96%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 89%, #000 94%, #000 96%, transparent 100%);
 }
-@keyframes ripple { 0% { transform: scale(.75); opacity: .75; } 100% { transform: scale(2.7); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .ripple { display: none; } }
+.ripple::after {
+  background: linear-gradient(to bottom, rgba(2, 14, 20, .50), rgba(2, 14, 20, .12) 50%, rgba(232, 244, 248, .45));
+  -webkit-mask: radial-gradient(closest-side, transparent 78%, #000 85%, #000 87%, transparent 92%);
+  mask: radial-gradient(closest-side, transparent 78%, #000 85%, #000 87%, transparent 92%);
+}
+@keyframes ripple {
+  0% { transform: scale(1); opacity: 0; }
+  6% { opacity: .9; }
+  45% { opacity: .45; }
+  100% { transform: scale(2.9); opacity: 0; }
+}
+/* a leaf dips as it meets the water, and its shadow draws in under it */
+.card.dip { animation: dip .55s cubic-bezier(.3, .6, .3, 1); }
+@keyframes dip {
+  0% { transform: scale(1.04); box-shadow: 0 9px 18px rgba(0, 0, 0, .34), inset 0 0 10px rgba(255, 255, 255, .08); }
+  38% { transform: scale(.945); box-shadow: 0 1px 4px rgba(0, 0, 0, .55), inset 0 0 10px rgba(255, 255, 255, .08); }
+  72% { transform: scale(1.012); }
+  100% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .ripple { display: none; } .card.dip { animation: none; } }
 .hero-row .card:nth-child(1) { --turn: -24deg; } .hero-row .card:nth-child(2) { --turn: 31deg; } .hero-row .card:nth-child(3) { --turn: -8deg; } .hero-row .card:nth-child(4) { --turn: 52deg; }

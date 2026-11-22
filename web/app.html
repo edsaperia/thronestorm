@@ -642,7 +642,7 @@ body.rot #stage { min-height: 0; }
     G.splash = null;
     setTimeout(() => wet.forEach((card) => {
       const el = !flying.has(card) && document.querySelector(`#board [data-card="${card}"]`);
-      if (el && !calm) ripple(local(el.getBoundingClientRect()));
+      if (el && !calm) ripple(local(el.getBoundingClientRect()), el);
     }), 0);
     if (SKIN.spin && document.body.animate) document.querySelectorAll('[data-card]').forEach((el) => drift(el, el.dataset.card));
     if (calm || !old || !document.body.animate || was !== q) return; // no flights while the screen itself is turning
@@ -664,21 +664,32 @@ body.rot #stage { min-height: 0; }
       const c = el.dataset.card;
       drift(g, c);
       let landed = false;
-      const land = () => { if (landed) return; landed = true; g.remove(); el.style.visibility = ''; if (wet.has(el.dataset.card)) ripple(to); };
+      const land = () => { if (landed) return; landed = true; g.remove(); el.style.visibility = ''; if (wet.has(el.dataset.card)) ripple(to, el); };
       flying.add(el.dataset.card);
       fly.onfinish = land; fly.oncancel = land;
       setTimeout(land, pace + 80); // in case the animation never reports back, e.g. in a background tab
     });
   }
-  // rings spreading on the water where something has just come down
-  function ripple(r) {
-    for (let i = 0; i < 3; i++) {
-      const ring = document.createElement('div');
-      ring.className = 'ripple';
-      ring.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;animation-delay:${i * 0.22}s`;
-      $('ripples').appendChild(ring);
-      setTimeout(() => ring.remove(), 2200 + i * 220);
-    }
+  // One ring spreading on the water where something has just come down. The piece dips as it
+  // lands, and its neighbours bob a little as the ring passes under them.
+  function ripple(r, el) {
+    const ring = document.createElement('div');
+    ring.className = 'ripple';
+    ring.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
+    $('ripples').appendChild(ring);
+    setTimeout(() => ring.remove(), 2700);
+    if (!el || !el.animate) return;
+    el.classList.remove('dip'); void el.offsetWidth; el.classList.add('dip');
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2, reach = r.width * 1.5;
+    document.querySelectorAll('#board [data-card]').forEach((o) => {
+      if (o === el || o.style.visibility === 'hidden') return;
+      const b = local(o.getBoundingClientRect());
+      const dx = b.left + b.width / 2 - cx, dy = b.top + b.height / 2 - cy, d = Math.hypot(dx, dy);
+      if (d < 1 || d > reach) return;
+      const k = 1.6 * (1 - d / reach * 0.5) / d; // nearer leaves move more
+      o.animate([{ transform: 'none' }, { transform: `translate(${dx * k}px,${dy * k}px)` }, { transform: 'none' }],
+        { duration: 900, delay: 120 + 520 * (d / reach), easing: 'ease-in-out' });
+    });
   }
   function render() {
     const old = Object.assign(places(), G.flyFrom || {}), was = q;
@@ -733,6 +744,13 @@ body.rot #stage { min-height: 0; }
       if (now.hands[1][t] !== was.hands[1][t]) fr['o' + t] = 1;
       if (TS.faceUp(now, t) !== TS.faceUp(was, t)) fr['d' + t] = 1;
     }
+    // a relic arriving in a hand makes a ring too, unless it had one when it was first lifted there
+    const had = new Set(G.rippled || []);
+    for (let p = 0; p < 2; p++) for (let t = 0; t < 4; t++) {
+      const c = now.hands[p][t];
+      if (c !== NONE && c !== was.hands[p][t] && !had.has(c) && !G.plot) splash.push(c);
+    }
+    G.rippled = null;
     // relics already set down during a plot have had their rings
     G.splash = (G.splash || []).concat(splash.filter((c) => !(G.plot && G.plot.placed.includes(c))));
     G.s = now; G.fresh = fr; G.stage = null; reset();
@@ -761,9 +779,11 @@ body.rot #stage { min-height: 0; }
       if (m[0] === 'claim' && m[2] !== null) {
         stacks[m[1]].push(TS.faceUp(s, m[1]));
         stage = { stacks, lifted: m[1], holes: [] };
+        G.splash = G.rippled = [TS.faceUp(s, m[1])];
       } else if (m[0] === 'plot') {
         for (const [r, x] of m[1]) { const c = s.cells[TS.cid(r, x)]; stacks[ctype(c)].push(c); }
         stage = { stacks, lifted: -1, holes: m[1].map(([r, x]) => key(r, x)) };
+        G.splash = G.rippled = m[1].map(([r, x]) => s.cells[TS.cid(r, x)]);
       }
       pace = 900;
       if (!stage) return commit(s, hit, 1);
@@ -780,6 +800,7 @@ body.rot #stage { min-height: 0; }
     reset();
     G.mode = 'plot';
     G.plot = { line, orig: cells, placed: [NONE, NONE, NONE], pool: mine.concat(cells) };
+    G.splash = cells.slice();
   }
   // The plot is made when the third relic goes down.
   function settlePlot() {
@@ -802,6 +823,7 @@ body.rot #stage { min-height: 0; }
       if (dst.k === 'hand') {
         if (held === NONE) return play(['claim', t, null, null]);
         G.mode = 'claim'; G.claim = { t, c, held }; G.pick = null;
+        G.splash = G.rippled = [c];
         return render();
       }
       if (dst.k === 'cell') {
@@ -825,6 +847,7 @@ body.rot #stage { min-height: 0; }
         [P.placed[src.i], P.placed[dst.i]] = [P.placed[dst.i], P.placed[src.i]];
         G.splash = [P.placed[src.i], P.placed[dst.i]].filter((c) => c !== NONE);
       } else if (src.k === 'place' && dst.k === 'hand' && P.placed[src.i] !== NONE) {
+        G.splash = [P.placed[src.i]];
         P.pool.push(P.placed[src.i]); P.placed[src.i] = NONE;
       }
       G.pick = null;
