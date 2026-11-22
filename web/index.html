@@ -152,14 +152,13 @@ button.card, button.slot, [data-dst] { cursor: pointer; }
 }
 
 /* ----- a large window with a mouse ----- */
-body.desk { font-size: 19px; }
-body.desk .table { max-width: 1800px; gap: 18px; }
-body.desk .side { width: 250px; gap: 12px; }
-body.desk .side .last { font-size: 16px; }
-body.desk .actions { gap: 8px; }
-body.desk .actions .btn { min-height: 48px; }
+body.desk { font-size: calc(16px + 3px * var(--big, 0)); }
+body.desk .table { max-width: 1800px; gap: calc(10px + 8px * var(--big, 0)); }
+body.desk .side { width: calc(150px + 100px * var(--big, 0)); }
+body.desk .side .last { font-size: calc(14px + 2px * var(--big, 0)); }
+body.desk .actions .btn { min-height: calc(40px + 8px * var(--big, 0)); }
 body.desk [data-src] { cursor: grab; }
-body.desk .title-inner { max-width: 760px; }
+body.desk .title-inner { max-width: calc(660px + 100px * var(--big, 0)); }
 body.desk .title-inner.sheet { max-width: 68ch; }
 
 /* ----- title screen and panels ----- */
@@ -818,8 +817,12 @@ window.SKIN = (function () {
   // With a mouse and a large window there is room for a bigger table and longer lines.
   // ?desktop=1 or ?desktop=0 in the address overrides the guess.
   const asked = /[?&]desktop=([01])/.exec(location.search);
-  const MOUSE = asked ? asked[1] === '1' : !!(window.matchMedia && window.matchMedia('(any-hover: hover) and (any-pointer: fine)').matches);
-  let desk = false;
+  const mq = (q) => !!(window.matchMedia && window.matchMedia(q).matches);
+  // A desktop is anything whose main pointer is a mouse, or a large screen that also has one
+  // (a laptop with a touch screen). Phones sometimes claim a fine pointer for a stylus, hence the size test.
+  const MOUSE = asked ? asked[1] === '1'
+    : mq('(pointer: fine)') || (mq('(any-pointer: fine)') && mq('(any-hover: hover)') && Math.min(screen.width, screen.height) >= 700);
+  let desk = false, big = 0;
   if (MOUSE) { // a mouse clicks; it does not tap
     const click = (t) => t.replace(/\bTap\b/g, 'Click').replace(/\btap\b/g, 'click').replace(/\btapped\b/g, 'clicked');
     const reword = (v) => typeof v === 'string' ? click(v)
@@ -832,9 +835,11 @@ window.SKIN = (function () {
   }
   function fit() {
     const Wd = window.innerWidth, Ht = window.innerHeight, st = stage.style;
-    rot = Ht > Wd;
-    desk = MOUSE && !rot && Wd >= 1000 && Ht >= 640;
+    rot = !MOUSE && Ht > Wd; // a desktop window is never turned on its side
+    desk = MOUSE;
+    big = desk ? Math.max(0, Math.min(1, (Math.min(Wd / 1000, Ht / 640) - 1) / 0.6)) : 0; // how much room there is to grow
     document.body.classList.toggle('desk', desk);
+    document.body.style.setProperty('--big', big.toFixed(3));
     q = rot ? 1 : 0;
     document.body.classList.toggle('turned', far() && !desk); // only the words turn to face the far player; at a desk both sit on one side
     document.body.classList.toggle('rot', q !== 0);
@@ -887,10 +892,10 @@ window.SKIN = (function () {
     const g = SKIN.gap, k = SKIN.rowPitch, gh = SKIN.handGap;
     const wide = $('table').clientWidth - 24, high = tableHeight();
     // across: piles (a piece + 20), the table (span + 1 pieces), the words (150), two gaps of 10
-    const byWidth = (wide - 20 - 20 - (desk ? 250 : 150) - (desk ? 28 : 12) - span * g) / (span + 2);
+    const byWidth = (wide - 20 - 20 - (150 + 100 * big) - (12 + 8 * big) - span * g) / (span + 2);
     // down: five rows: hand, three realm rows (pitch k), hand
     const byHeight = ((high - 20 - 2 * k * g - 2 * gh) / (3 + 2 * k)) / SKIN.ratio;
-    const cw = Math.floor(Math.max(22, Math.min(SKIN.maxWidth * (desk ? 1.6 : 1), byWidth, byHeight)));
+    const cw = Math.floor(Math.max(22, Math.min(SKIN.maxWidth * (1 + 0.6 * big), byWidth, byHeight)));
     document.documentElement.style.setProperty('--cw', cw + 'px');
     const bw = Math.ceil(span * (cw + g) + cw + 12);
     board.style.width = bw + 'px';
@@ -1093,7 +1098,7 @@ window.SKIN = (function () {
     if (calm || gone >= DRIFT) return;
     try {
       el.animate([{ transform: `rotate(${d.from}deg)` }, { transform: `rotate(${d.to}deg)` }],
-        { duration: DRIFT, delay: -gone, easing: 'cubic-bezier(.25,.6,.3,1)', pseudoElement: '::after' });
+        { duration: DRIFT, delay: -gone, easing: 'cubic-bezier(.37,0,.63,1)', pseudoElement: '::after' });
     } catch (e) { /* the leaf simply lies at its new angle */ }
   }
   function slide(old, was) {
