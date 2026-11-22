@@ -1098,7 +1098,7 @@ window.SKIN = (function () {
     if (calm || gone >= DRIFT) return;
     try {
       el.animate([{ transform: `rotate(${d.from}deg)` }, { transform: `rotate(${d.to}deg)` }],
-        { duration: DRIFT, delay: -gone, easing: 'cubic-bezier(.37,0,.63,1)', pseudoElement: '::after' });
+        { duration: DRIFT, delay: -gone, easing: 'cubic-bezier(.16,.8,.24,1)', pseudoElement: '::after' });
     } catch (e) { /* the leaf simply lies at its new angle */ }
   }
   function slide(old, was) {
